@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_primary">#0A0C0F</color>
+    <color name="bg_card">#111418</color>
+    <color name="bg_card2">#181C22</color>
+    <color name="border">#1E2530</color>
+    <color name="border2">#2A3340</color>
+    <color name="text_primary">#E8EDF2</color>
+    <color name="text_secondary">#7A8A99</color>
+    <color name="text_dim">#3D4F60</color>
+    <color name="blue">#3D6FFF</color>
+    <color name="blue_dim">#1A3F6E</color>
+    <color name="green">#00D97E</color>
+    <color name="green_dim">#003D23</color>
+    <color name="red">#FF3B3B</color>
+    <color name="red_dim">#4A0F0F</color>
+    <color name="amber">#FFAA00</color>
+</resources>

@@ -1,0 +1,745 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SCREEN 3 — Main Dashboard (THE race screen)
+    Activity: DashboardActivity.java
+    Orientation: LANDSCAPE (locked via AndroidManifest.xml)
+    Notes:
+      - Add android:screenOrientation="landscape" in AndroidManifest for DashboardActivity
+      - Add WAKE_LOCK permission + acquire PowerManager.WakeLock in onCreate()
+      - All TextViews updated from HandlerThread via Handler.post()
+      - alert_banner is GONE by default; set VISIBLE when threshold exceeded
+      - tv_motor_temp colored red in Java when > threshold
+      - tv_fc_temp colored red in Java when > threshold (primary alert)
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0C0F"
+    android:padding="8dp">
+
+    <!-- ═══════════════════════════════════════════════
+         ALERT BANNER — GONE by default, shown on alert
+         ═══════════════════════════════════════════════ -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_alert_banner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:cardBackgroundColor="#4A0F0F"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        android:layout_marginBottom="6dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚠"
+                android:textColor="#FF3B3B"
+                android:textSize="18sp"
+                android:layout_marginEnd="10dp"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_alert_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FC Temperature High — 71°C"
+                    android:textColor="#FCA5A5"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:id="@+id/tv_alert_sub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Threshold: 70°C · Reduce power immediately"
+                    android:textColor="#F87171"
+                    android:textSize="11sp"
+                    android:layout_marginTop="2dp"/>
+
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_dismiss_alert"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Dismiss"
+                android:textColor="#FCA5A5"
+                android:textSize="11sp"
+                android:background="@drawable/bg_btn_alert_dismiss"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"/>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- ═══════════════════════════════════════════════
+         TOP BAR — car name + BT status
+         ═══════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_top_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintTop_toBottomOf="@id/card_alert_banner"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Car badge -->
+        <TextView
+            android:id="@+id/tv_car_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="THAIGER 7"
+            android:textColor="#93C5FD"
+            android:textSize="10sp"
+            android:letterSpacing="0.1"
+            android:background="@drawable/bg_badge_blue"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"/>
+
+        <!-- BT status badge -->
+        <TextView
+            android:id="@+id/tv_bt_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="● BT LIVE"
+            android:textColor="#86EFAC"
+            android:textSize="10sp"
+            android:letterSpacing="0.08"
+            android:background="@drawable/bg_badge_green"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:layout_marginStart="6dp"/>
+
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+        <!-- Update rate indicator -->
+        <TextView
+            android:id="@+id/tv_update_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="50ms · live"
+            android:textColor="#3D4F60"
+            android:textSize="10sp"/>
+
+    </LinearLayout>
+
+    <!-- ═══════════════════════════════════════════════
+         MAIN CONTENT ROW — Left | Center | Right
+         ═══════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_main_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintTop_toBottomOf="@id/ll_top_bar"
+        app:layout_constraintBottom_toTopOf="@id/ll_bottom_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- ── LEFT ZONE — Energy ── -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="28"
+            android:orientation="vertical"
+            android:layout_marginEnd="4dp">
+
+            <!-- Fuel Cell State card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="4dp"
+                app:cardBackgroundColor="#111418"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="FUEL CELL STATE"
+                        android:textColor="#3D4F60"
+                        android:textSize="9sp"
+                        android:letterSpacing="0.1"
+                        android:layout_marginBottom="4dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tv_fc_state"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="84"
+                            android:textColor="#E8EDF2"
+                            android:textSize="28sp"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="%"
+                            android:textColor="#3D4F60"
+                            android:textSize="13sp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginBottom="2dp"/>
+
+                    </LinearLayout>
+
+                    <!-- State of charge bar -->
+                    <ProgressBar
+                        android:id="@+id/pb_fc_state"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:progressTint="#00D97E"
+                        android:progressBackgroundTint="#1E2530"
+                        android:progress="84"
+                        android:max="100"
+                        android:layout_marginTop="6dp"/>
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Power Draw card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="4dp"
+                app:cardBackgroundColor="#111418"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="POWER DRAW"
+                        android:textColor="#3D4F60"
+                        android:textSize="9sp"
+                        android:letterSpacing="0.1"
+                        android:layout_marginBottom="4dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tv_power"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="320"
+                            android:textColor="#E8EDF2"
+                            android:textSize="28sp"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="W"
+                            android:textColor="#3D4F60"
+                            android:textSize="13sp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginBottom="2dp"/>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Current card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="#111418"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CURRENT"
+                        android:textColor="#3D4F60"
+                        android:textSize="9sp"
+                        android:letterSpacing="0.1"
+                        android:layout_marginBottom="4dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tv_current"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="8.2"
+                            android:textColor="#E8EDF2"
+                            android:textSize="28sp"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="A"
+                            android:textColor="#3D4F60"
+                            android:textSize="13sp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginBottom="2dp"/>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+        <!-- ── VERTICAL DIVIDER ── -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="#1E2530"
+            android:layout_marginEnd="4dp"/>
+
+        <!-- ── CENTER ZONE — Speed ── -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="42"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginEnd="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SPEED"
+                android:textColor="#3D4F60"
+                android:textSize="10sp"
+                android:letterSpacing="0.15"
+                android:layout_marginBottom="4dp"/>
+
+            <!-- Hero speed value -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="bottom">
+
+                <TextView
+                    android:id="@+id/tv_speed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="27"
+                    android:textColor="#E8EDF2"
+                    android:textSize="88sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:lineSpacingExtra="0dp"
+                    android:includeFontPadding="false"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="km/h"
+                    android:textColor="#3D4F60"
+                    android:textSize="18sp"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="14dp"/>
+
+            </LinearLayout>
+
+            <!-- Min speed indicator -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="min "
+                    android:textColor="#3D4F60"
+                    android:textSize="11sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="25 km/h"
+                    android:textColor="#00D97E"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="  ✓ on target"
+                    android:textColor="#00D97E"
+                    android:textSize="11sp"/>
+
+            </LinearLayout>
+
+            <!-- Efficiency badge -->
+            <TextView
+                android:id="@+id/tv_efficiency_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="● EFFICIENT"
+                android:textColor="#86EFAC"
+                android:textSize="10sp"
+                android:letterSpacing="0.08"
+                android:background="@drawable/bg_badge_green"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginTop="10dp"/>
+
+        </LinearLayout>
+
+        <!-- ── VERTICAL DIVIDER ── -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="#1E2530"
+            android:layout_marginEnd="4dp"/>
+
+        <!-- ── RIGHT ZONE — System Health ── -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="28"
+            android:orientation="vertical">
+
+            <!-- FC Temp card — PRIMARY, large -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_fc_temp"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="4dp"
+                app:cardBackgroundColor="#111418"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="FC TEMP"
+                            android:textColor="#3D4F60"
+                            android:textSize="9sp"
+                            android:letterSpacing="0.1"
+                            android:layout_weight="1"/>
+
+                        <!-- Alert tag — GONE by default -->
+                        <TextView
+                            android:id="@+id/tv_fc_alert_tag"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▲ HIGH"
+                            android:textColor="#FF3B3B"
+                            android:textSize="9sp"
+                            android:visibility="gone"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="4dp">
+
+                        <TextView
+                            android:id="@+id/tv_fc_temp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="52"
+                            android:textColor="#E8EDF2"
+                            android:textSize="28sp"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="°C"
+                            android:textColor="#3D4F60"
+                            android:textSize="13sp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginBottom="2dp"/>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- H2 Pressure card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="4dp"
+                app:cardBackgroundColor="#111418"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="4dp"
+                        android:letterSpacing="0.1"
+                        android:text="Voltage Difference"
+                        android:textColor="#3D4F60"
+                        android:textSize="9sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tv_voltage_difference"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="4.2"
+                            android:textColor="#E8EDF2"
+                            android:textSize="28sp"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="mV"
+                            android:textColor="#3D4F60"
+                            android:textSize="13sp"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginBottom="2dp"/>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Motor Temp card — SECONDARY, smaller text -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="#111418"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="10dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ideal Round Time"
+                        android:textColor="#3D4F60"
+                        android:textSize="9sp"
+                        android:letterSpacing="0.1"
+                        android:layout_marginBottom="4dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tv_ideal_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="58"
+                            android:textColor="#7A8A99"
+                            android:textSize="20sp"
+                            android:fontFamily="sans-serif-medium"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="s"
+                            android:textColor="#3D4F60"
+                            android:textSize="12sp"
+                            android:layout_marginStart="2dp"
+                            android:layout_marginBottom="1dp"/>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ═══════════════════════════════════════════════
+         BOTTOM BAR — Run context
+         ═══════════════════════════════════════════════ -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/ll_bottom_bar"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        app:cardBackgroundColor="#111418"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp">
+
+            <!-- Run Timer -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TIME "
+                android:textColor="#3D4F60"
+                android:textSize="9sp"
+                android:letterSpacing="0.1"/>
+            <TextView
+                android:id="@+id/tv_run_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="04:32"
+                android:textColor="#E8EDF2"
+                android:textSize="14sp"
+                android:fontFamily="monospace"/>
+
+            <View android:layout_width="1dp" android:layout_height="16dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+            <!-- Distance -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DIST "
+                android:textColor="#3D4F60"
+                android:textSize="9sp"
+                android:letterSpacing="0.1"/>
+            <TextView
+                android:id="@+id/tv_distance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.2 km"
+                android:textColor="#E8EDF2"
+                android:textSize="14sp"
+                android:fontFamily="monospace"/>
+
+            <View android:layout_width="1dp" android:layout_height="16dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+            <!-- Energy used -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ENERGY "
+                android:textColor="#3D4F60"
+                android:textSize="9sp"
+                android:letterSpacing="0.1"/>
+            <TextView
+                android:id="@+id/tv_energy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="18 Wh"
+                android:textColor="#E8EDF2"
+                android:textSize="14sp"
+                android:fontFamily="monospace"/>
+
+            <!-- Spacer -->
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+            <!-- Live indicator -->
+            <TextView
+                android:id="@+id/tv_live_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="50ms · live"
+                android:textColor="#3D4F60"
+                android:textSize="9sp"/>
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

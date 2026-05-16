@@ -25,6 +25,12 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    packagingOptions {
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE*'
+        exclude 'META-INF/NOTICE*'
+    }
 }
 
 dependencies {
@@ -41,4 +47,7 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.core:core:1.13.1'
+
+    // MQTT publish relay
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
 }

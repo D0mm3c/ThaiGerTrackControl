@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +24,7 @@ import com.thaiger.h2racing.bt.BluetoothService;
 import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
 import com.thaiger.h2racing.model.TelemetryModel;
+import com.thaiger.h2racing.relay.MqttRelayService;
 import com.thaiger.h2racing.util.AlertFx;
 import com.thaiger.h2racing.util.Prefs;
 
@@ -45,6 +48,7 @@ public class DashboardActivity extends AppCompatActivity {
 
     private CarProfile car;
     private BluetoothService service;
+    private MqttRelayService relayService;
     private PowerManager.WakeLock wakeLock;
     private Prefs    prefs;
     private AlertFx  alertFx;
@@ -137,6 +141,7 @@ public class DashboardActivity extends AppCompatActivity {
             runStats = new RunStats();
             ((App) getApplication()).setRunStats(runStats);
         }
+        relayService = ((App) getApplication()).getRelayService();
 
         if (prefs.isWakeLock()) {
             acquireWakeLock();
@@ -276,20 +281,72 @@ public class DashboardActivity extends AppCompatActivity {
         super.onResume();
         if (service == null) return;
         service.setListener(new BluetoothService.Listener() {
-            @Override public void onState(BluetoothService.State s, String detail) { applyState(s, detail); }
+            @Override public void onState(BluetoothService.State s, String detail) { applyBtState(s); }
             @Override public void onTelemetry(TelemetryModel m) { applyTelemetry(m); }
         });
+        if (relayService != null) {
+            relayService.setStateListener((s, detail) -> applyRelayState(s));
+        }
     }
 
-    private void applyState(BluetoothService.State state, String detail) {
-        switch (state) {
-            case CONNECTED:    tvBtStatus.setText("BT ●");  tvBtStatus.setTextColor(Color.parseColor("#00D97E")); break;
+    /** Letzter bekannter BT-Status — für kombinierte Top-Bar-Anzeige. */
+    private BluetoothService.State lastBtState     = BluetoothService.State.IDLE;
+    /** Letzter bekannter Relay-Status. */
+    private MqttRelayService.State lastRelayState  = MqttRelayService.State.IDLE;
+
+    private void applyBtState(BluetoothService.State state) {
+        lastBtState = state;
+        renderStatusBar();
+    }
+
+    private void applyRelayState(MqttRelayService.State state) {
+        lastRelayState = state;
+        renderStatusBar();
+    }
+
+    /**
+     * Zeigt BT-Status und RELAY-Status in {@code tv_bt_status} als eine Zeile.
+     * Beispiele:
+     *   "BT ●  RELAY ●"   — alles grün
+     *   "BT ○  RELAY ✕"   — BT reconnecting, Relay down
+     *   "BT ●"            — Relay disabled (kein RELAY-Teil)
+     */
+    private void renderStatusBar() {
+        String btSymbol;
+        int btColor;
+        switch (lastBtState) {
+            case CONNECTED:    btSymbol = "BT ●";  btColor = 0xFF00D97E; break;
             case CONNECTING:
-            case RECONNECTING: tvBtStatus.setText("BT ○ " + detail); tvBtStatus.setTextColor(Color.parseColor("#FFAA00")); break;
+            case RECONNECTING: btSymbol = "BT ○";  btColor = 0xFFFFAA00; break;
             case FAILED:
-            case STOPPED:      tvBtStatus.setText("BT ✕");  tvBtStatus.setTextColor(Color.parseColor("#FF3B3B")); break;
-            case IDLE:         tvBtStatus.setText("BT —");  tvBtStatus.setTextColor(Color.parseColor("#7A8A99")); break;
+            case STOPPED:      btSymbol = "BT ✕";  btColor = 0xFFFF3B3B; break;
+            default:           btSymbol = "BT —";  btColor = 0xFF7A8A99; break;
         }
+
+        if (relayService == null || lastRelayState == MqttRelayService.State.DISABLED
+                || lastRelayState == MqttRelayService.State.IDLE) {
+            // Relay nicht aktiv — nur BT zeigen
+            tvBtStatus.setText(btSymbol);
+            tvBtStatus.setTextColor(btColor);
+            return;
+        }
+
+        String relaySymbol;
+        int relayColor;
+        switch (lastRelayState) {
+            case CONNECTED:    relaySymbol = "RELAY ●";  relayColor = 0xFF00D97E; break;
+            case CONNECTING:
+            case RECONNECTING: relaySymbol = "RELAY ○";  relayColor = 0xFFFFAA00; break;
+            case FAILED:
+            case STOPPED:      relaySymbol = "RELAY ✕";  relayColor = 0xFFFF3B3B; break;
+            default:           relaySymbol = "RELAY —";  relayColor = 0xFF7A8A99; break;
+        }
+
+        String full = btSymbol + "   " + relaySymbol;
+        SpannableString ss = new SpannableString(full);
+        ss.setSpan(new ForegroundColorSpan(btColor),    0, btSymbol.length(), 0);
+        ss.setSpan(new ForegroundColorSpan(relayColor), btSymbol.length() + 3, full.length(), 0);
+        tvBtStatus.setText(ss);
     }
 
     private void applyTelemetry(TelemetryModel m) {

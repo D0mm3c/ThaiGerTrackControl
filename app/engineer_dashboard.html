@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thaiger H₂ — Engineer Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+  :root {
+    --bg:      #08090B;
+    --bg2:     #0E1014;
+    --card:    #111418;
+    --card2:   #181C22;
+    --border:  #1E2530;
+    --border2: #2A3340;
+    --text:    #E8EDF2;
+    --dim:     #7A8A99;
+    --faint:   #3D4F60;
+    --blue:    #3D6FFF;
+    --blue2:   #1A3F6E;
+    --green:   #00D97E;
+    --red:     #FF3B3B;
+    --amber:   #FFAA00;
+    --mono:    'JetBrains Mono', monospace;
+    --sans:    'Space Grotesk', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  /* ── Layout ─────────────────────────────────── */
+  #app {
+    display: grid;
+    grid-template-rows: 44px 1fr;
+    grid-template-columns: 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Top Bar ─────────────────────────────────── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 10;
+  }
+  #logo { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .14em; color: var(--text); white-space: nowrap; }
+  #logo span { color: var(--blue); }
+  .tb-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; }
+  #car-tabs { display: flex; gap: 4px; }
+  .car-tab { font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border2); color: var(--dim); cursor: pointer; background: none; transition: all .15s; letter-spacing: .08em; }
+  .car-tab.active { border-color: var(--blue); color: var(--blue); background: var(--blue2); }
+  #conn-status { font-family: var(--mono); font-size: 11px; display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); transition: background .3s; }
+  .dot.connected    { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.connecting   { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
+  .dot.error        { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  #conn-label { color: var(--dim); }
+  #latency { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-left: 4px; }
+  .tb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  #timestamp { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  #settings-btn { font-size: 16px; background: none; border: none; cursor: pointer; color: var(--faint); padding: 4px; line-height: 1; transition: color .15s; }
+  #settings-btn:hover { color: var(--blue); }
+
+  /* ── Main Content ───────────────────────────── */
+  #main {
+    display: grid;
+    grid-template-columns: 280px 1fr 240px;
+    grid-template-rows: 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ── Left Panel — Hero Metrics ──────────────── */
+  #panel-left {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .hero-block {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .hero-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 4px; }
+  .hero-value { font-family: var(--mono); font-weight: 700; font-size: 48px; line-height: 1; color: var(--text); }
+  .hero-value.red   { color: var(--red); }
+  .hero-value.amber { color: var(--amber); }
+  .hero-value.green { color: var(--green); }
+  .hero-unit { font-family: var(--mono); font-size: 13px; color: var(--dim); margin-left: 4px; }
+  .hero-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+  /* ── Center Panel — Data Table + Chart ─────── */
+  #panel-center {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+  }
+  #chart-wrap {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  #chart-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 6px; }
+  #powerChart { height: 72px !important; }
+
+  #table-wrap { overflow-y: auto; }
+  #table-wrap::-webkit-scrollbar { width: 4px; }
+  #table-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    position: sticky; top: 0; z-index: 2;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+    color: var(--faint); text-align: left;
+    padding: 6px 12px; background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: var(--card2); }
+  tbody td { font-family: var(--mono); font-size: 12px; padding: 5px 12px; }
+  .td-key  { color: var(--faint); font-size: 10px; letter-spacing: .08em; width: 28px; }
+  .td-name { color: var(--dim); width: 130px; }
+  .td-val  { color: var(--text); font-weight: 600; min-width: 80px; }
+  .td-val.alert-red   { color: var(--red); }
+  .td-val.alert-amber { color: var(--amber); }
+  .td-unit { color: var(--faint); font-size: 10px; }
+  td.stale { opacity: .35; }
+
+  /* ── Right Panel — Laps + Alerts ───────────── */
+  #panel-right {
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .rp-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .rp-title { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 8px; }
+  .lap-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .lap-key { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .lap-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); }
+  .lap-val.fast { color: var(--green); }
+  .lap-val.slow { color: var(--red); }
+
+  #alerts-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
+  #alerts-list::-webkit-scrollbar { width: 4px; }
+  #alerts-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .alert-item {
+    font-family: var(--mono); font-size: 10px;
+    padding: 5px 8px; border-radius: 4px;
+    margin-bottom: 4px; border-left: 2px solid var(--red);
+    background: rgba(255,59,59,.06); color: var(--dim);
+    line-height: 1.4;
+  }
+  .alert-item .a-time { color: var(--faint); display: block; margin-bottom: 1px; }
+  .alert-item .a-msg  { color: var(--red); }
+  #no-alerts { font-family: var(--mono); font-size: 11px; color: var(--faint); padding: 8px 0; text-align: center; }
+
+  /* ── Settings Overlay ───────────────────────── */
+  #settings-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(8,9,11,.85);
+    backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+  }
+  #settings-overlay.open { display: flex; }
+  #settings-panel {
+    background: var(--card); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 28px; width: 420px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+  }
+  #settings-panel h2 { font-family: var(--mono); font-size: 14px; letter-spacing: .1em; color: var(--text); margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--faint); display: block; margin-bottom: 5px; }
+  .field input {
+    width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+    color: var(--text); font-family: var(--mono); font-size: 13px;
+    padding: 8px 10px; border-radius: 6px; outline: none; transition: border .15s;
+  }
+  .field input:focus { border-color: var(--blue); }
+  .field-row { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
+  .settings-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn { font-family: var(--mono); font-size: 12px; padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; transition: all .15s; letter-spacing: .06em; }
+  .btn-primary { background: var(--blue2); color: var(--blue); border: 1px solid var(--blue); }
+  .btn-primary:hover { background: var(--blue); color: #fff; }
+  .btn-ghost { background: none; color: var(--dim); border: 1px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--dim); color: var(--text); }
+  .conn-hint { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-top: 14px; line-height: 1.6; }
+
+  /* ── Driving Hint Bar ───────────────────────── */
+  .hint-bar-wrap { position: relative; height: 6px; background: var(--border); border-radius: 3px; margin-top: 8px; }
+  .hint-bar { height: 100%; border-radius: 3px; transition: width .4s, background .4s; }
+  .hint-labels { display: flex; justify-content: space-between; margin-top: 3px; }
+  .hint-label { font-family: var(--mono); font-size: 9px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Top Bar ── -->
+  <div id="topbar">
+    <div id="logo">THAIGER <span>H₂</span> RACING</div>
+    <div class="tb-sep"></div>
+    <div id="car-tabs">
+      <button class="car-tab active" onclick="switchCar('thaiger7')">THAIGER 7</button>
+      <button class="car-tab" onclick="switchCar('bengalo')">BENGALO</button>
+    </div>
+    <div class="tb-sep"></div>
+    <div id="conn-status">
+      <div class="dot" id="conn-dot"></div>
+      <span id="conn-label">Disconnected</span>
+      <span id="latency"></span>
+    </div>
+    <div class="tb-right">
+      <span id="timestamp">—</span>
+      <button id="settings-btn" onclick="openSettings()">⚙</button>
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <div id="main">
+
+    <!-- Left Panel: Hero Metrics -->
+    <div id="panel-left">
+      <div class="hero-block">
+        <div class="hero-label">SPEED</div>
+        <div><span class="hero-value" id="h-speed">—</span><span class="hero-unit">km/h</span></div>
+        <div class="hero-sub">Avg <span id="h-avgspeed">—</span> km/h</div>
+      </div>
+      <div class="hero-block">
+        <div class="hero-label">MOTOR POWER</div>
+        <div><span class="hero-value" id="h-power">—</span><span class="hero-unit">W</span></div>
+        <div class="hero-sub">U<sub>m</sub> <span id="h-motorv">—</span> V · I<sub>m</sub> <span id="h-motora">—</span> A</div>
+      </div>
+      <div class="hero-block">
+        <div class="hero-label">FC TEMPERATURE</div>
+        <div><span class="hero-value" id="h-fctemp">—</span><span class="hero-unit">°C</span></div>
+        <div class="hero-sub">FC <span id="h-fcv">—</span> V · <span id="h-fca">—</span> A</div>
+      </div>
+      <div class="hero-block">
+        <div class="hero-label">SYSTEM EFFICIENCY</div>
+        <div><span class="hero-value" id="h-syseff">—</span><span class="hero-unit">%</span></div>
+        <div class="hero-sub">FC Eff <span id="h-fceff">—</span> %</div>
+      </div>
+      <div class="hero-block" style="flex:1">
+        <div class="hero-label">DRIVING HINT</div>
+        <div style="font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:4px;" id="h-hint-label">—</div>
+        <div class="hint-bar-wrap">
+          <div class="hint-bar" id="h-hint-bar" style="width:50%;background:var(--blue)"></div>
+        </div>
+        <div class="hint-labels"><span class="hint-label">SLOWER</span><span class="hint-label">FASTER</span></div>
+      </div>
+    </div>
+
+    <!-- Center Panel: Chart + Table -->
+    <div id="panel-center">
+      <div id="chart-wrap">
+        <div id="chart-label">MOTOR POWER HISTORY (last 120 frames)</div>
+        <canvas id="powerChart"></canvas>
+      </div>
+      <div id="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>KEY</th><th>FIELD</th><th>VALUE</th><th>UNIT</th>
+            </tr>
+          </thead>
+          <tbody id="data-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right Panel: Lap + Alerts -->
+    <div id="panel-right">
+      <div class="rp-section">
+        <div class="rp-title">LAP TIMING</div>
+        <div class="lap-row"><span class="lap-key">Lap</span><span class="lap-val" id="r-laps">—</span></div>
+        <div class="lap-row"><span class="lap-key">Total time</span><span class="lap-val" id="r-total">—</span></div>
+        <div class="lap-row"><span class="lap-key">Target lap</span><span class="lap-val" id="r-target">—</span></div>
+        <div class="lap-row"><span class="lap-key">Opt. speed</span><span class="lap-val" id="r-optspd">—</span></div>
+      </div>
+      <div class="rp-section">
+        <div class="rp-title">FC HEALTH</div>
+        <div class="lap-row"><span class="lap-key">Cell Diff</span><span class="lap-val" id="r-celldiff">—</span></div>
+        <div class="lap-row"><span class="lap-key">Air Pump</span><span class="lap-val" id="r-airpump">—</span></div>
+        <div class="lap-row"><span class="lap-key">FC Energy</span><span class="lap-val" id="r-fcenergy">—</span></div>
+        <div class="lap-row"><span class="lap-key">Mot Energy</span><span class="lap-val" id="r-motenergy">—</span></div>
+      </div>
+      <div class="rp-section" style="flex:0">
+        <div class="rp-title">ALERT LOG</div>
+      </div>
+      <div id="alerts-list"><div id="no-alerts">No alerts</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Settings Overlay -->
+<div id="settings-overlay">
+  <div id="settings-panel">
+    <h2>MQTT BROKER SETTINGS</h2>
+    <div class="field field-row">
+      <div>
+        <label>BROKER HOST</label>
+        <input id="s-host" type="text" placeholder="abc123.s1.eu.hivemq.cloud">
+      </div>
+      <div>
+        <label>PORT</label>
+        <input id="s-port" type="number" value="8884">
+      </div>
+    </div>
+    <div class="field">
+      <label>USERNAME</label>
+      <input id="s-user" type="text">
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input id="s-pass" type="password">
+    </div>
+    <div class="settings-actions">
+      <button class="btn btn-primary" onclick="saveAndConnect()">Connect</button>
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+    </div>
+    <p class="conn-hint">
+      Port 8884 = MQTT over WebSocket TLS (HiveMQ Cloud standard).<br>
+      Topic: <code style="color:var(--blue)">thaiger/&lt;car&gt;/telemetry</code>
+    </p>
+  </div>
+</div>
+
+<script>
+// ─── Config ────────────────────────────────────────────────────────────
+const FC_TEMP_ALERT_C = 70;
+const CELL_DIFF_ALERT_MV = 50;
+const POWER_HISTORY_SIZE = 120;
+const STALE_TIMEOUT_MS = 3000;
+
+// ─── State ─────────────────────────────────────────────────────────────
+let client = null;
+let currentCar = 'thaiger7';
+let lastData = {};
+let lastMsgAt = 0;
+let powerHistory = [];
+let alerts = [];
+let staleTimer = null;
+
+// ─── Field Definitions ────────────────────────────────────────────────
+const FIELDS = [
+  { key:'A',    name:'Speed',          unit:'km/h',   alert: v=>v<25,   alertClass:'alert-amber' },
+  { key:'B',    name:'Avg Speed',      unit:'km/h' },
+  { key:'C',    name:'Laps',           unit:'' },
+  { key:'D',    name:'Total Time',     unit:'' },
+  { key:'E',    name:'Target Lap',     unit:'' },
+  { key:'F',    name:'Opt. Speed',     unit:'km/h' },
+  { key:'G',    name:'FC Voltage',     unit:'V' },
+  { key:'H',    name:'Supercap V',     unit:'V' },
+  { key:'I',    name:'Motor V',        unit:'V' },
+  { key:'J',    name:'FC Current',     unit:'A' },
+  { key:'K',    name:'Supercap A',     unit:'A' },
+  { key:'L',    name:'Motor A',        unit:'A' },
+  { key:'M',    name:'Own Cons.',      unit:'A' },
+  { key:'N',    name:'FC Temp',        unit:'°C',     alert: v=>v>FC_TEMP_ALERT_C, alertClass:'alert-red' },
+  { key:'O',    name:'Air Pump Duty',  unit:'%' },
+  { key:'P',    name:'Drive Hint',     unit:'0-100' },
+  { key:'Q',    name:'Cell Volt Diff', unit:'mV',     alert: v=>v>CELL_DIFF_ALERT_MV, alertClass:'alert-red' },
+  { key:'R',    name:'FC Energy',      unit:'Ws' },
+  { key:'S',    name:'Motor Energy',   unit:'Ws' },
+  { key:'T',    name:'FC Efficiency',  unit:'%' },
+  { key:'U',    name:'Sys Efficiency', unit:'%' },
+  { key:'dist', name:'Distance (Phone)',unit:'km' },
+];
+
+// ─── Build table rows ─────────────────────────────────────────────────
+function buildTable() {
+  const tbody = document.getElementById('data-table-body');
+  tbody.innerHTML = '';
+  for (const f of FIELDS) {
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + f.key;
+    tr.innerHTML = `
+      <td class="td-key">${f.key}</td>
+      <td class="td-name">${f.name}</td>
+      <td class="td-val" id="val-${f.key}">—</td>
+      <td class="td-unit">${f.unit}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// ─── Chart ────────────────────────────────────────────────────────────
+let powerChart;
+function initChart() {
+  const ctx = document.getElementById('powerChart').getContext('2d');
+  powerChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array(POWER_HISTORY_SIZE).fill(''),
+      datasets: [{
+        data: Array(POWER_HISTORY_SIZE).fill(null),
+        borderColor: '#3D6FFF',
+        backgroundColor: 'rgba(61,111,255,.12)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false },
+        y: {
+          display: true,
+          grid: { color: '#1E2530' },
+          ticks: { color: '#3D4F60', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 3 }
+        }
+      }
+    }
+  });
+}
+
+function pushPower(w) {
+  powerHistory.push(w);
+  if (powerHistory.length > POWER_HISTORY_SIZE) powerHistory.shift();
+  powerChart.data.datasets[0].data = [...powerHistory, ...Array(POWER_HISTORY_SIZE - powerHistory.length).fill(null)].slice(-POWER_HISTORY_SIZE);
+  powerChart.update('none');
+}
+
+// ─── MQTT ─────────────────────────────────────────────────────────────
+function connect(host, port, user, pass) {
+  if (client) { try { client.end(true); } catch(_) {} }
+  setStatus('connecting');
+
+  const url = `wss://${host}:${port}/mqtt`;
+  const clientId = 'engineer-' + Math.random().toString(36).slice(2, 8);
+
+  client = mqtt.connect(url, {
+    clientId, username: user, password: pass,
+    reconnectPeriod: 3000, connectTimeout: 10000,
+    rejectUnauthorized: true,
+  });
+
+  client.on('connect', () => {
+    setStatus('connected');
+    const topic = `thaiger/${currentCar}/telemetry`;
+    client.subscribe(topic, { qos: 0 });
+    addAlert('INFO', `Subscribed to ${topic}`);
+  });
+
+  client.on('message', (topic, payload) => {
+    const rxAt = Date.now();
+    const lag = rxAt - lastMsgAt;
+    lastMsgAt = rxAt;
+    updateLatency(lag > 0 && lag < 10000 ? lag : null);
+
+    try { handleFrame(JSON.parse(payload.toString())); }
+    catch(e) { console.warn('Parse error:', e); }
+
+    resetStaleTimer();
+  });
+
+  client.on('offline', () => setStatus('connecting'));
+  client.on('error', e => { setStatus('error'); console.error(e); });
+  client.on('close', () => setStatus('disconnected'));
+}
+
+function switchCar(car) {
+  if (car === currentCar) return;
+  currentCar = car;
+  document.querySelectorAll('.car-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.car-tab[onclick*="${car}"]`).classList.add('active');
+  lastData = {};
+  clearHero();
+
+  if (client && client.connected) {
+    client.unsubscribe(`thaiger/${car === 'thaiger7' ? 'bengalo' : 'thaiger7'}/telemetry`);
+    client.subscribe(`thaiger/${car}/telemetry`, { qos: 0 });
+  }
+}
+
+// ─── Data Handling ────────────────────────────────────────────────────
+function handleFrame(d) {
+  lastData = d;
+
+  // Hero: Speed
+  const spd = d.A;
+  if (spd != null) {
+    const el = document.getElementById('h-speed');
+    el.textContent = typeof spd === 'number' ? spd.toFixed(1) : spd;
+    el.className = 'hero-value' + (spd < 25 ? ' amber' : '');
+  }
+  setText('h-avgspeed', d.B, 1);
+
+  // Hero: Power (I * L = motor V * motor A)
+  const pwr = d.I != null && d.L != null ? d.I * d.L : null;
+  if (pwr != null) {
+    document.getElementById('h-power').textContent = pwr.toFixed(0);
+    pushPower(pwr);
+  }
+  setText('h-motorv', d.I, 1);
+  setText('h-motora', d.L, 1);
+
+  // Hero: FC Temp
+  if (d.N != null) {
+    const el = document.getElementById('h-fctemp');
+    el.textContent = d.N.toFixed(1);
+    el.className = 'hero-value' + (d.N > FC_TEMP_ALERT_C ? ' red' : '');
+    if (d.N > FC_TEMP_ALERT_C) addAlert('FC TEMP', `${d.N.toFixed(1)} °C > ${FC_TEMP_ALERT_C} °C`);
+  }
+  setText('h-fcv', d.G, 1);
+  setText('h-fca', d.J, 1);
+
+  // Hero: Efficiency
+  setText('h-syseff', d.U, 0);
+  setText('h-fceff', d.T, 0);
+
+  // Hero: Driving hint (P: 0-50 slower, 50-100 faster)
+  if (d.P != null) {
+    const p = d.P;
+    const pct = Math.max(0, Math.min(100, p));
+    const bar = document.getElementById('h-hint-bar');
+    const lbl = document.getElementById('h-hint-label');
+    bar.style.width = pct + '%';
+    if (p < 45) {
+      bar.style.background = '#FFAA00';
+      lbl.textContent = `${p.toFixed(0)} — Slow down`;
+      lbl.style.color = '#FFAA00';
+    } else if (p > 55) {
+      bar.style.background = '#00D97E';
+      lbl.textContent = `${p.toFixed(0)} — Speed up`;
+      lbl.style.color = '#00D97E';
+    } else {
+      bar.style.background = '#3D6FFF';
+      lbl.textContent = `${p.toFixed(0)} — On target`;
+      lbl.style.color = '#7A8A99';
+    }
+  }
+
+  // Right panel: lap timing
+  setEl('r-laps', d.C != null ? `Lap ${d.C}` : '—');
+  setEl('r-total', d.D || '—');
+  setEl('r-target', d.E || '—');
+  setText('r-optspd', d.F, 1, 'km/h');
+
+  // Right panel: FC health
+  if (d.Q != null) {
+    const el = document.getElementById('r-celldiff');
+    el.textContent = d.Q.toFixed(0) + ' mV';
+    el.className = 'lap-val' + (d.Q > CELL_DIFF_ALERT_MV ? ' slow' : '');
+    if (d.Q > CELL_DIFF_ALERT_MV) addAlert('CELL DIFF', `${d.Q.toFixed(0)} mV > ${CELL_DIFF_ALERT_MV} mV`);
+  }
+  setText('r-airpump', d.O, 0, '%');
+  if (d.R != null) setEl('r-fcenergy', (d.R / 3600).toFixed(2) + ' Wh');
+  if (d.S != null) setEl('r-motenergy', (d.S / 3600).toFixed(2) + ' Wh');
+
+  // Data table
+  updateTable(d);
+
+  // Timestamp
+  const now = new Date();
+  document.getElementById('timestamp').textContent =
+    now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0');
+}
+
+function updateTable(d) {
+  for (const f of FIELDS) {
+    const raw = d[f.key];
+    const el  = document.getElementById('val-' + f.key);
+    if (!el) continue;
+    if (raw == null) { el.textContent = '—'; el.className = 'td-val'; continue; }
+    const isNum = typeof raw === 'number';
+    el.textContent = isNum ? raw.toFixed(raw > 100 ? 0 : raw > 10 ? 1 : 2) : raw;
+    el.className = 'td-val' + (f.alert && f.alert(raw) ? ` ${f.alertClass}` : '');
+  }
+}
+
+// ─── Alert Log ────────────────────────────────────────────────────────
+const alertDedup = {};
+function addAlert(type, msg) {
+  const key = type + msg;
+  const now = Date.now();
+  if (alertDedup[key] && now - alertDedup[key] < 5000) return; // deduplicate
+  alertDedup[key] = now;
+
+  alerts.unshift({ type, msg, ts: new Date().toTimeString().slice(0, 8) });
+  if (alerts.length > 20) alerts.pop();
+  renderAlerts();
+}
+
+function renderAlerts() {
+  const list = document.getElementById('alerts-list');
+  if (alerts.length === 0) {
+    list.innerHTML = '<div id="no-alerts">No alerts</div>';
+    return;
+  }
+  list.innerHTML = alerts.map(a => `
+    <div class="alert-item">
+      <span class="a-time">${a.ts}</span>
+      <span class="a-msg">${a.type}: ${a.msg}</span>
+    </div>`).join('');
+}
+
+// ─── Stale Detection ──────────────────────────────────────────────────
+function resetStaleTimer() {
+  clearTimeout(staleTimer);
+  document.querySelectorAll('.td-val, .hero-value').forEach(el => el.classList.remove('stale'));
+  staleTimer = setTimeout(() => {
+    document.querySelectorAll('.td-val, .hero-value').forEach(el => el.classList.add('stale'));
+    setStatus('stale');
+  }, STALE_TIMEOUT_MS);
+}
+
+// ─── Status ───────────────────────────────────────────────────────────
+function setStatus(s) {
+  const dot   = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  dot.className = 'dot';
+  switch (s) {
+    case 'connected':    dot.classList.add('connected');  label.textContent = 'Live'; break;
+    case 'connecting':   dot.classList.add('connecting'); label.textContent = 'Connecting…'; break;
+    case 'stale':        dot.classList.add('connecting'); label.textContent = 'Stale'; break;
+    case 'error':        dot.classList.add('error');      label.textContent = 'Error'; break;
+    default:             label.textContent = 'Disconnected';
+  }
+}
+
+function updateLatency(ms) {
+  const el = document.getElementById('latency');
+  el.textContent = ms != null ? `${ms}ms` : '';
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────
+function openSettings() {
+  const cfg = loadConfig();
+  document.getElementById('s-host').value = cfg.host || '';
+  document.getElementById('s-port').value = cfg.port || '8884';
+  document.getElementById('s-user').value = cfg.user || '';
+  document.getElementById('s-pass').value = cfg.pass || '';
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
+function saveAndConnect() {
+  const cfg = {
+    host: document.getElementById('s-host').value.trim(),
+    port: document.getElementById('s-port').value.trim(),
+    user: document.getElementById('s-user').value.trim(),
+    pass: document.getElementById('s-pass').value,
+  };
+  localStorage.setItem('thaiger_mqtt_cfg', JSON.stringify(cfg));
+  closeSettings();
+  connect(cfg.host, cfg.port, cfg.user, cfg.pass);
+}
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem('thaiger_mqtt_cfg') || '{}'); } catch(_) { return {}; }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+function setEl(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function setText(id, val, dp, suffix) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val != null ? (typeof val === 'number' ? val.toFixed(dp || 0) : val) + (suffix ? ' ' + suffix : '') : '—';
+}
+function clearHero() {
+  ['h-speed','h-avgspeed','h-power','h-motorv','h-motora','h-fctemp','h-fcv','h-fca','h-syseff','h-fceff'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '—'; el.className = el.className.replace(/ (red|amber|green)/g,''); }
+  });
+  ['r-laps','r-total','r-target','r-optspd','r-celldiff','r-airpump','r-fcenergy','r-motenergy'].forEach(id => setEl(id, '—'));
+}
+
+// ─── Close settings on ESC or outside click ───────────────────────────
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeSettings();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
+
+// ─── Init ─────────────────────────────────────────────────────────────
+buildTable();
+initChart();
+
+// Auto-connect if saved config exists
+const cfg = loadConfig();
+if (cfg.host) {
+  connect(cfg.host, cfg.port || '8884', cfg.user, cfg.pass);
+} else {
+  openSettings(); // first-time: prompt for config
+}
+</script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import android.app.Application;
 import com.thaiger.h2racing.bt.BluetoothService;
 import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
+import com.thaiger.h2racing.relay.MqttRelayService;
 
 /**
  * Process-globaler Halter für Dienste, die über mehrere Activities leben.
@@ -26,6 +27,9 @@ public class App extends Application {
     /** Aktuelle Run-Statistik — gesetzt von ConnectingActivity bei Session-Start. */
     private RunStats runStats;
 
+    /** MQTT-Relay-Service — läuft vom Connecting-Screen bis zum Post-Run. */
+    private MqttRelayService relayService;
+
     public BluetoothService getBluetoothService()              { return bluetoothService; }
     public void setBluetoothService(BluetoothService service)  { this.bluetoothService = service; }
 
@@ -34,4 +38,7 @@ public class App extends Application {
 
     public RunStats getRunStats()                              { return runStats; }
     public void setRunStats(RunStats stats)                    { this.runStats = stats; }
+
+    public MqttRelayService getRelayService()                  { return relayService; }
+    public void setRelayService(MqttRelayService svc)          { this.relayService = svc; }
 }

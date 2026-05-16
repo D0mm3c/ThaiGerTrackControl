@@ -23,8 +23,11 @@ import androidx.core.content.ContextCompat;
 import com.thaiger.h2racing.App;
 import com.thaiger.h2racing.R;
 import com.thaiger.h2racing.bt.BluetoothService;
+import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
 import com.thaiger.h2racing.model.TelemetryModel;
+import com.thaiger.h2racing.relay.MqttRelayService;
+import com.thaiger.h2racing.util.Prefs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -186,12 +189,14 @@ public class ConnectingActivity extends AppCompatActivity {
         tvTitle.setText("Connecting to " + name + "…");
         tvDevice.setText(device.getAddress());
 
-        service = new BluetoothService(new BluetoothService.Listener() {
+        App app = (App) getApplication();
+        service = new BluetoothService(this, new BluetoothService.Listener() {
             @Override public void onState(BluetoothService.State s, String detail) { applyState(s, detail); }
             @Override public void onTelemetry(TelemetryModel m) { /* not used here */ }
         });
-        ((App) getApplication()).setBluetoothService(service);
-        ((App) getApplication()).setRunStats(new RunStats());
+        app.setBluetoothService(service);
+        app.setRunStats(new RunStats());
+        startRelayIfEnabled(app, name);
         service.connect(device.getAddress(), name);
     }
 
@@ -199,13 +204,29 @@ public class ConnectingActivity extends AppCompatActivity {
         tvTitle.setText("Demo Mode");
         tvDevice.setText("Synthetic stream — kein BT benötigt");
 
-        service = new BluetoothService(new BluetoothService.Listener() {
+        App app = (App) getApplication();
+        service = new BluetoothService(this, new BluetoothService.Listener() {
             @Override public void onState(BluetoothService.State s, String detail) { applyState(s, detail); }
             @Override public void onTelemetry(TelemetryModel m) { /* not used here */ }
         });
-        ((App) getApplication()).setBluetoothService(service);
-        ((App) getApplication()).setRunStats(new RunStats());
+        app.setBluetoothService(service);
+        app.setRunStats(new RunStats());
+        startRelayIfEnabled(app, "mock");
         service.startMock();
+    }
+
+    /** Startet den MQTT-Relay-Service wenn in Prefs aktiviert. */
+    private void startRelayIfEnabled(App app, String sessionName) {
+        Prefs prefs = new Prefs(this);
+        if (!prefs.isMqttEnabled()) {
+            app.setRelayService(null);
+            return;
+        }
+        CarProfile car = app.getCarProfile();
+        MqttRelayService relay = new MqttRelayService(this, car);
+        app.setRelayService(relay);
+        service.setRelay(relay);   // BT-Frames fließen automatisch in die Relay-Queue
+        relay.start();
     }
 
     private void applyState(BluetoothService.State state, String detail) {

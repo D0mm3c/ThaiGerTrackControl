@@ -15,6 +15,7 @@ import com.thaiger.h2racing.R;
 import com.thaiger.h2racing.bt.BluetoothService;
 import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
+import com.thaiger.h2racing.relay.MqttRelayService;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -37,11 +38,15 @@ public class PostRunActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_post_run);
 
-        // Run beenden: BluetoothService stoppen, RunStats finalisieren
+        // Run beenden: BluetoothService + Relay stoppen, RunStats finalisieren
         App app = (App) getApplication();
         BluetoothService svc = app.getBluetoothService();
         if (svc != null) svc.stop();
         app.setBluetoothService(null);
+
+        MqttRelayService relay = app.getRelayService();
+        if (relay != null) relay.stop();
+        app.setRelayService(null);
 
         RunStats stats = app.getRunStats();
         if (stats != null) stats.end();

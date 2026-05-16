@@ -2,35 +2,35 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ════════════ Bluetooth Permissions ════════════
-         Galaxy A20 (Android 9/10): BLUETOOTH + BLUETOOTH_ADMIN + FINE_LOCATION.
-         Android 12+: BLUETOOTH_CONNECT/SCAN (mit usesPermissionFlags neverForLocation).
+         Android 11 (API 30): BLUETOOTH + BLUETOOTH_ADMIN + ACCESS_FINE_LOCATION.
+         Gerät nutzt HM-10 BLE-Modul (Bluetooth 4.0, GATT, Service FFE0/Char FFE1).
+         BLUETOOTH_CONNECT / BLUETOOTH_SCAN sind Android 12+, harmlos zu deklarieren.
     -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30"/>
+    <!-- Location erforderlich für BLE auf Android ≤ 11 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30"/>
+    <!-- Android 12+ -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30"/>
 
-    <!-- Cockpit-Constraints -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
-
-    <!-- Wird gebraucht, sobald MQTT-Relay implementiert wird -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <uses-feature
-        android:name="android.hardware.bluetooth"
+        android:name="android.hardware.bluetooth_le"
         android:required="true"/>
 
     <application
         android:name=".App"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.Thaiger"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

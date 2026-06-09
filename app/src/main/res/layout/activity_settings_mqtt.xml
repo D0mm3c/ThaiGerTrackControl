@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SCREEN 6b — MQTT / Telemetry-Relay-Einstellungen (Sub-Screen von Settings)
+    Activity: MqttSettingsActivity.java
+    Orientation: Portrait
+    Notes:
+      - Enable-Switch global
+      - Klick auf Host/Port/User/Password/Rate öffnet jeweils einen Eingabe-Dialog
+      - Password wird in Summary maskiert dargestellt
+-->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0C0F">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <!-- Header -->
+        <TextView
+            android:id="@+id/tv_mqtt_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="‹ Back"
+            android:textColor="#3D6FFF"
+            android:textSize="14sp"
+            android:padding="6dp"
+            android:layout_marginBottom="14dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <TextView
+            android:id="@+id/tv_mqtt_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="MQTT Broker"
+            android:textColor="#E8EDF2"
+            android:textSize="22sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="4dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_mqtt_back"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <TextView
+            android:id="@+id/tv_mqtt_subtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Live-Telemetrie zum Engineer streamen"
+            android:textColor="#7A8A99"
+            android:textSize="12sp"
+            android:layout_marginBottom="20dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_mqtt_title"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <!-- Enable card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_mqtt_enable"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#111418"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="20dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_mqtt_subtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Enable telemetry relay"
+                        android:textColor="#E8EDF2"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Publish during run to MQTT broker"
+                        android:textColor="#3D4F60"
+                        android:textSize="11sp"
+                        android:layout_marginTop="2dp"/>
+
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/sw_mqtt_enabled"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:thumbTint="#3D6FFF"
+                    android:trackTint="#1A3F6E"/>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Section header: Connection -->
+        <TextView
+            android:id="@+id/tv_section_conn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CONNECTION"
+            android:textColor="#3D4F60"
+            android:textSize="9sp"
+            android:letterSpacing="0.12"
+            android:layout_marginBottom="6dp"
+            app:layout_constraintTop_toBottomOf="@id/card_mqtt_enable"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_mqtt_conn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#111418"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="20dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_section_conn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <!-- Host row -->
+                <LinearLayout
+                    android:id="@+id/row_mqtt_host"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Broker host"
+                        android:textColor="#E8EDF2"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/tv_mqtt_host_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="#3D6FFF"
+                        android:textSize="13sp"
+                        android:padding="4dp"/>
+
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Port row -->
+                <LinearLayout
+                    android:id="@+id/row_mqtt_port"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Port"
+                        android:textColor="#E8EDF2"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/tv_mqtt_port_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="8883"
+                        android:textColor="#3D6FFF"
+                        android:textSize="13sp"
+                        android:padding="4dp"/>
+
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- TLS row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Use TLS"
+                            android:textColor="#E8EDF2"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="HiveMQ Cloud requires TLS"
+                            android:textColor="#3D4F60"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp"/>
+
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/sw_mqtt_tls"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:thumbTint="#3D6FFF"
+                        android:trackTint="#1A3F6E"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Section header: Auth -->
+        <TextView
+            android:id="@+id/tv_section_auth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AUTHENTICATION"
+            android:textColor="#3D4F60"
+            android:textSize="9sp"
+            android:letterSpacing="0.12"
+            android:layout_marginBottom="6dp"
+            app:layout_constraintTop_toBottomOf="@id/card_mqtt_conn"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_mqtt_auth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#111418"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="20dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_section_auth"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <LinearLayout
+                    android:id="@+id/row_mqtt_user"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Username"
+                        android:textColor="#E8EDF2"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/tv_mqtt_user_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="#3D6FFF"
+                        android:textSize="13sp"
+                        android:padding="4dp"/>
+
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <LinearLayout
+                    android:id="@+id/row_mqtt_pass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Password"
+                        android:textColor="#E8EDF2"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:id="@+id/tv_mqtt_pass_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="#3D6FFF"
+                        android:textSize="13sp"
+                        android:padding="4dp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Section header: Stream -->
+        <TextView
+            android:id="@+id/tv_section_stream"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="STREAM"
+            android:textColor="#3D4F60"
+            android:textSize="9sp"
+            android:letterSpacing="0.12"
+            android:layout_marginBottom="6dp"
+            app:layout_constraintTop_toBottomOf="@id/card_mqtt_auth"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_mqtt_stream"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#111418"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="28dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_section_stream"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:id="@+id/row_mqtt_rate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="12dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Publish rate"
+                        android:textColor="#E8EDF2"
+                        android:textSize="14sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Frames per second to the broker (1-10)"
+                        android:textColor="#3D4F60"
+                        android:textSize="11sp"
+                        android:layout_marginTop="2dp"/>
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_mqtt_rate_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="5 Hz"
+                    android:textColor="#3D6FFF"
+                    android:textSize="13sp"
+                    android:padding="4dp"/>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Topic preview -->
+        <TextView
+            android:id="@+id/tv_topic_preview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Topic: thaiger/&lt;carId&gt;/telemetry"
+            android:textColor="#3D4F60"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:layout_marginBottom="4dp"
+            app:layout_constraintTop_toBottomOf="@id/card_mqtt_stream"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <TextView
+            android:id="@+id/tv_topic_note"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="carId leitet sich vom Auto-Select ab (thaiger7 / bengalo)."
+            android:textColor="#1E2530"
+            android:textSize="11sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_topic_preview"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

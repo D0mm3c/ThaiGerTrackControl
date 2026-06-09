@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Reusable stat row for PostRunActivity
+    Usage: <include layout="@layout/item_stat_row" android:id="@+id/row_xxx"/>
+    In Java: set tv_stat_key and tv_stat_value text via findViewById on the included view's root
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="11dp"
+    android:paddingBottom="11dp">
+
+    <TextView
+        android:id="@+id/tv_stat_key"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Label"
+        android:textColor="#7A8A99"
+        android:textSize="13sp"/>
+
+    <TextView
+        android:id="@+id/tv_stat_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="—"
+        android:textColor="#E8EDF2"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif-medium"/>
+
+</LinearLayout>

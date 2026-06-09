@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SCREEN 5 — Post-Run Summary
+    Activity: PostRunActivity.java
+    Orientation: Portrait
+    Notes:
+      - Displayed after driver taps "End Run" from Dashboard
+      - All stat values populated from in-memory run log (List<TelemetryModel>)
+      - "Export CSV" writes run log to external storage, shares via Intent
+      - "New Run" navigates back to CarSelectActivity
+-->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0C0F">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <!-- Header row -->
+        <LinearLayout
+            android:id="@+id/ll_summary_header"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Run Complete"
+                    android:textColor="#E8EDF2"
+                    android:textSize="22sp"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:id="@+id/tv_run_meta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Thaiger 7 · 14 May 2025 · 09:41"
+                    android:textColor="#3D4F60"
+                    android:textSize="12sp"
+                    android:layout_marginTop="3dp"/>
+
+            </LinearLayout>
+
+            <!-- Export CSV button -->
+            <TextView
+                android:id="@+id/tv_export_csv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="↓ Export CSV"
+                android:textColor="#3D6FFF"
+                android:textSize="13sp"
+                android:padding="8dp"/>
+
+        </LinearLayout>
+
+        <!-- Stats card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_stats"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#111418"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:layout_constraintTop_toBottomOf="@id/ll_summary_header"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <!-- Stat row: Duration -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_duration"/>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Stat row: Distance -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_distance"/>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Stat row: Avg Speed -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_avg_speed"/>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Stat row: Energy Used -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_energy"/>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Stat row: Peak Power -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_peak_power"/>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Stat row: Max FC Temp -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_max_fc_temp"/>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
+                <!-- Stat row: Alerts Triggered -->
+                <include layout="@layout/item_stat_row"
+                    android:id="@+id/row_alerts"/>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Power graph label -->
+        <TextView
+            android:id="@+id/tv_graph_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="POWER DRAW OVER RUN"
+            android:textColor="#3D4F60"
+            android:textSize="9sp"
+            android:letterSpacing="0.12"
+            android:layout_marginTop="20dp"
+            app:layout_constraintTop_toBottomOf="@id/card_stats"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <!-- Power graph placeholder — implement with Canvas/View -->
+        <View
+            android:id="@+id/view_power_graph"
+            android:layout_width="0dp"
+            android:layout_height="80dp"
+            android:background="#111418"
+            android:layout_marginTop="6dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_graph_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <!-- Action buttons -->
+        <LinearLayout
+            android:id="@+id/ll_summary_actions"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            app:layout_constraintTop_toBottomOf="@id/view_power_graph"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <Button
+                android:id="@+id/btn_new_run"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="New Run"
+                android:textColor="#93C5FD"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"
+                android:background="@drawable/bg_btn_primary"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_back_to_select"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="Car Select"
+                android:textColor="#7A8A99"
+                android:textSize="14sp"
+                android:background="@drawable/bg_btn_secondary"/>
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

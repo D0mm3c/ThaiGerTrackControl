@@ -66,6 +66,8 @@ public class DashboardActivity extends AppCompatActivity {
     /** Throttle: minimum delta zwischen UI-Refreshes. */
     private int   updateRateMs;
     private long  lastUiUpdateMs = 0;
+    /** Gate für Speed-Farb-Warning. */
+    private boolean speedColorEnabled = true;
 
     // ─── Hero ───
     private TextView tvSpeed;
@@ -83,6 +85,10 @@ public class DashboardActivity extends AppCompatActivity {
     private CardView cardFcTemp;
     private TextView tvVoltageDifference;    // nicht im Protokoll → "—"
     private TextView tvIdealTime;     // nicht im Protokoll → "—"
+
+    // ─── Min-speed indicator ───
+    private TextView tvMinSpeedValue;
+    private TextView tvMinSpeedStatus;
 
     // ─── Top-Bar / Bottom-Bar ───
     private TextView tvBtStatus;
@@ -152,6 +158,7 @@ public class DashboardActivity extends AppCompatActivity {
         fcTempThresholdC    = prefs.getFcTempMaxC(car);
         cellDiffThresholdMv = prefs.getCellDiffMaxMv(car);
         updateRateMs        = prefs.getUpdateRateMs();
+        speedColorEnabled   = prefs.isSpeedColorEnabled();
         runStats         = ((App) getApplication()).getRunStats();
         if (runStats == null) {
             // Defensive: falls jemand direkt zum Dashboard navigiert hat
@@ -178,6 +185,8 @@ public class DashboardActivity extends AppCompatActivity {
         cardFcTemp        = findViewById(R.id.card_fc_temp);
         tvVoltageDifference = findViewById(R.id.tv_voltage_difference);
         tvIdealTime = findViewById(R.id.tv_ideal_time);
+        tvMinSpeedValue   = findViewById(R.id.tv_min_speed_value);
+        tvMinSpeedStatus  = findViewById(R.id.tv_min_speed_status);
         tvBtStatus        = findViewById(R.id.tv_bt_status);
         tvCarBadge        = findViewById(R.id.tv_car_badge);
         tvUpdateRate      = findViewById(R.id.tv_update_rate);
@@ -192,11 +201,11 @@ public class DashboardActivity extends AppCompatActivity {
 
     private void applyCarBadge() {
         tvCarBadge.setText(car.displayName.toUpperCase(Locale.ROOT));
-        // tv_h2_pressure-Slot zeigt jetzt CELL DIFF [mV], tv_motor_temp-Slot zeigt
-        // TARGET LAP [mm:ss]. Beide werden von applyTelemetry() befüllt.
-        // Bis dahin Layout-Defaults ("4.2" / "58") überschreiben, damit's nicht verwirrt.
         tvVoltageDifference.setText("—");
         tvIdealTime.setText("—:—");
+        if (tvMinSpeedValue != null) {
+            tvMinSpeedValue.setText(String.format(Locale.US, "%.0f km/h", car.minSpeedKmh));
+        }
     }
 
     private void attachListeners() {
@@ -401,7 +410,10 @@ public class DashboardActivity extends AppCompatActivity {
     private void applyTelemetry(TelemetryModel m) {
         long now = System.currentTimeMillis();
         // Stats akkumulieren auf JEDES Frame, auch wenn UI gedrosselt → kein Datenverlust
-        if (runStats != null) runStats.update(m, fcTempThresholdC);
+        if (runStats != null) {
+            runStats.update(m, fcTempThresholdC);
+            runStats.addFrame(m);
+        }
 
         // Sync run-time clock on every frame so the 1-second ticker stays accurate
         if (m.totalTimeSec >= 0) {
@@ -418,11 +430,18 @@ public class DashboardActivity extends AppCompatActivity {
         // ─── Hero: Speed ───
         if (!Float.isNaN(m.speedKmh)) {
             tvSpeed.setText(String.format(Locale.US, "%.0f", m.speedKmh));
-            // Min-Speed-Warnung
-            if (m.speedKmh < car.minSpeedKmh) {
-                tvSpeed.setTextColor(Color.parseColor("#FF3B3B"));
+            boolean onTarget = m.speedKmh >= car.minSpeedKmh;
+            if (speedColorEnabled) {
+                tvSpeed.setTextColor(onTarget ? 0xFFE8EDF2 : 0xFFFF3B3B);
             } else {
-                tvSpeed.setTextColor(Color.parseColor("#E8EDF2"));
+                tvSpeed.setTextColor(0xFFE8EDF2);
+            }
+            if (tvMinSpeedStatus != null) {
+                tvMinSpeedStatus.setText(onTarget ? "  ✓ on target" : "  ✗ too slow");
+                tvMinSpeedStatus.setTextColor(onTarget ? 0xFF00D97E : 0xFFFF3B3B);
+                if (tvMinSpeedValue != null) {
+                    tvMinSpeedValue.setTextColor(onTarget ? 0xFF00D97E : 0xFFFF3B3B);
+                }
             }
         }
 

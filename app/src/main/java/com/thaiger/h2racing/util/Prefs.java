@@ -25,6 +25,10 @@ public final class Prefs {
     private static final String K_FC_TEMP_PREFIX  = "fc_temp_max_";    // + carId
     private static final String K_CELLDIFF_PREFIX = "cell_diff_max_"; // + carId
 
+    // Speed color
+    private static final String K_SPEED_COLOR   = "speed_color";
+    public  static final boolean DEFAULT_SPEED_COLOR = true;
+
     // MQTT-Relay
     private static final String K_MQTT_ENABLED  = "mqtt_enabled";
     private static final String K_MQTT_HOST     = "mqtt_host";
@@ -57,6 +61,10 @@ public final class Prefs {
 
     public int  getUpdateRateMs()           { return sp.getInt(K_UPDATE_RATE_MS, DEFAULT_UPDATE_RATE_MS); }
     public void setUpdateRateMs(int v)      { sp.edit().putInt(K_UPDATE_RATE_MS, Math.max(20, Math.min(500, v))).apply(); }
+
+    // ─── Speed color ───
+    public boolean isSpeedColorEnabled()           { return sp.getBoolean(K_SPEED_COLOR, DEFAULT_SPEED_COLOR); }
+    public void setSpeedColorEnabled(boolean v)    { sp.edit().putBoolean(K_SPEED_COLOR, v).apply(); }
 
     // ─── Alerts ───
     public boolean isVibrate()              { return sp.getBoolean(K_VIBRATE, DEFAULT_VIBRATE); }

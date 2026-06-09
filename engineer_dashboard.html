@@ -1,209 +1,246 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thaiger H₂ — Engineer Dashboard</title>
+
+<!-- Leaflet (OpenStreetMap) -->
+<link  rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- MQTT over WebSocket -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+<!-- Power chart -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap');
 
-  :root {
-    --bg:      #08090B;
-    --bg2:     #0E1014;
-    --card:    #111418;
-    --card2:   #181C22;
-    --border:  #1E2530;
-    --border2: #2A3340;
-    --text:    #E8EDF2;
-    --dim:     #7A8A99;
-    --faint:   #3D4F60;
-    --blue:    #3D6FFF;
-    --blue2:   #1A3F6E;
-    --green:   #00D97E;
-    --red:     #FF3B3B;
-    --amber:   #FFAA00;
-    --mono:    'JetBrains Mono', monospace;
-    --sans:    'Space Grotesk', sans-serif;
-  }
+:root {
+  --bg:      #08090B;
+  --bg2:     #0E1014;
+  --card:    #111418;
+  --card2:   #181C22;
+  --border:  #1E2530;
+  --border2: #2A3340;
+  --text:    #E8EDF2;
+  --dim:     #7A8A99;
+  --faint:   #3D4F60;
+  --blue:    #3D6FFF;
+  --blue2:   #1A3F6E;
+  --green:   #00D97E;
+  --red:     #FF3B3B;
+  --amber:   #FFAA00;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Space Grotesk', sans-serif;
+}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
 
-  /* ── Layout ─────────────────────────────────── */
-  #app {
-    display: grid;
-    grid-template-rows: 44px 1fr;
-    grid-template-columns: 1fr;
-    height: 100vh;
-    overflow: hidden;
-  }
+/* ── App Shell ─────────────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: 44px 1fr;
+  height: 100vh;
+}
 
-  /* ── Top Bar ─────────────────────────────────── */
-  #topbar {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 0 20px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    position: relative;
-    z-index: 10;
-  }
-  #logo { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .14em; color: var(--text); white-space: nowrap; }
-  #logo span { color: var(--blue); }
-  .tb-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; }
-  #car-tabs { display: flex; gap: 4px; }
-  .car-tab { font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border2); color: var(--dim); cursor: pointer; background: none; transition: all .15s; letter-spacing: .08em; }
-  .car-tab.active { border-color: var(--blue); color: var(--blue); background: var(--blue2); }
-  #conn-status { font-family: var(--mono); font-size: 11px; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); transition: background .3s; }
-  .dot.connected    { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .dot.connecting   { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
-  .dot.error        { background: var(--red); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  #conn-label { color: var(--dim); }
-  #latency { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-left: 4px; }
-  .tb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-  #timestamp { font-family: var(--mono); font-size: 10px; color: var(--faint); }
-  #settings-btn { font-size: 16px; background: none; border: none; cursor: pointer; color: var(--faint); padding: 4px; line-height: 1; transition: color .15s; }
-  #settings-btn:hover { color: var(--blue); }
+/* ── Top Bar ───────────────────────────────────────────────────── */
+#topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 18px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  z-index: 200;
+}
+#logo { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .14em; white-space: nowrap; }
+#logo span { color: var(--blue); }
+.tb-sep { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; }
+#car-tabs { display: flex; gap: 4px; }
+.car-tab {
+  font-family: var(--mono); font-size: 11px; padding: 3px 10px;
+  border-radius: 4px; border: 1px solid var(--border2); color: var(--dim);
+  cursor: pointer; background: none; letter-spacing: .08em; transition: all .15s;
+}
+.car-tab.active { border-color: var(--blue); color: var(--blue); background: var(--blue2); }
+#conn-status { display: flex; align-items: center; gap: 7px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); transition: background .3s; }
+.dot.connected  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.dot.connecting { background: var(--amber); animation: blink 1s ease-in-out infinite; }
+.dot.error      { background: var(--red); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+#conn-label { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+#latency { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+#timestamp { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+#follow-btn {
+  font-family: var(--mono); font-size: 10px; padding: 3px 8px;
+  border-radius: 4px; border: 1px solid var(--border2); color: var(--dim);
+  cursor: pointer; background: none; letter-spacing: .06em; transition: all .15s;
+}
+#follow-btn.active { border-color: var(--green); color: var(--green); background: rgba(0,217,126,.08); }
+#settings-btn { font-size: 15px; background: none; border: none; cursor: pointer; color: var(--faint); padding: 4px; transition: color .15s; }
+#settings-btn:hover { color: var(--blue); }
 
-  /* ── Main Content ───────────────────────────── */
-  #main {
-    display: grid;
-    grid-template-columns: 280px 1fr 240px;
-    grid-template-rows: 1fr;
-    gap: 0;
-    overflow: hidden;
-  }
+/* ── Main Grid: left | map+chart | right ───────────────────────── */
+#main {
+  display: grid;
+  grid-template-columns: 264px 1fr 288px;
+  overflow: hidden;
+}
 
-  /* ── Left Panel — Hero Metrics ──────────────── */
-  #panel-left {
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .hero-block {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    position: relative;
-  }
-  .hero-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 4px; }
-  .hero-value { font-family: var(--mono); font-weight: 700; font-size: 48px; line-height: 1; color: var(--text); }
-  .hero-value.red   { color: var(--red); }
-  .hero-value.amber { color: var(--amber); }
-  .hero-value.green { color: var(--green); }
-  .hero-unit { font-family: var(--mono); font-size: 13px; color: var(--dim); margin-left: 4px; }
-  .hero-sub { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 4px; }
+/* ── Left: Hero Metrics ────────────────────────────────────────── */
+#panel-left { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 
-  /* ── Center Panel — Data Table + Chart ─────── */
-  #panel-center {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    overflow: hidden;
-  }
-  #chart-wrap {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-  }
-  #chart-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 6px; }
-  #powerChart { height: 72px !important; }
+.hero-block { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.hero-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 4px; }
+.hero-value { font-family: var(--mono); font-weight: 700; font-size: 46px; line-height: 1; }
+.hero-value.red   { color: var(--red); }
+.hero-value.amber { color: var(--amber); }
+.hero-unit  { font-family: var(--mono); font-size: 13px; color: var(--dim); margin-left: 3px; }
+.hero-sub   { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 4px; }
 
-  #table-wrap { overflow-y: auto; }
-  #table-wrap::-webkit-scrollbar { width: 4px; }
-  #table-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th {
-    position: sticky; top: 0; z-index: 2;
-    font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
-    color: var(--faint); text-align: left;
-    padding: 6px 12px; background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-  }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
-  tbody tr:hover { background: var(--card2); }
-  tbody td { font-family: var(--mono); font-size: 12px; padding: 5px 12px; }
-  .td-key  { color: var(--faint); font-size: 10px; letter-spacing: .08em; width: 28px; }
-  .td-name { color: var(--dim); width: 130px; }
-  .td-val  { color: var(--text); font-weight: 600; min-width: 80px; }
-  .td-val.alert-red   { color: var(--red); }
-  .td-val.alert-amber { color: var(--amber); }
-  .td-unit { color: var(--faint); font-size: 10px; }
-  td.stale { opacity: .35; }
+/* driving hint bar */
+.hint-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; margin-top: 8px; }
+.hint-bar { height: 100%; border-radius: 3px; transition: width .5s, background .5s; }
+.hint-labels { display: flex; justify-content: space-between; margin-top: 3px; }
+.hint-lbl { font-family: var(--mono); font-size: 9px; color: var(--faint); }
 
-  /* ── Right Panel — Laps + Alerts ───────────── */
-  #panel-right {
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .rp-section {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .rp-title { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 8px; }
-  .lap-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
-  .lap-key { font-family: var(--mono); font-size: 11px; color: var(--dim); }
-  .lap-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); }
-  .lap-val.fast { color: var(--green); }
-  .lap-val.slow { color: var(--red); }
+/* ── Center: Map + Power Chart ─────────────────────────────────── */
+#panel-center { display: grid; grid-template-rows: 1fr 100px; overflow: hidden; }
 
-  #alerts-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
-  #alerts-list::-webkit-scrollbar { width: 4px; }
-  #alerts-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-  .alert-item {
-    font-family: var(--mono); font-size: 10px;
-    padding: 5px 8px; border-radius: 4px;
-    margin-bottom: 4px; border-left: 2px solid var(--red);
-    background: rgba(255,59,59,.06); color: var(--dim);
-    line-height: 1.4;
-  }
-  .alert-item .a-time { color: var(--faint); display: block; margin-bottom: 1px; }
-  .alert-item .a-msg  { color: var(--red); }
-  #no-alerts { font-family: var(--mono); font-size: 11px; color: var(--faint); padding: 8px 0; text-align: center; }
+#map-wrap { position: relative; }
+#map { width: 100%; height: 100%; }
 
-  /* ── Settings Overlay ───────────────────────── */
-  #settings-overlay {
-    display: none;
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(8,9,11,.85);
-    backdrop-filter: blur(6px);
-    align-items: center; justify-content: center;
-  }
-  #settings-overlay.open { display: flex; }
-  #settings-panel {
-    background: var(--card); border: 1px solid var(--border2);
-    border-radius: 12px; padding: 28px; width: 420px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.6);
-  }
-  #settings-panel h2 { font-family: var(--mono); font-size: 14px; letter-spacing: .1em; color: var(--text); margin-bottom: 20px; }
-  .field { margin-bottom: 14px; }
-  .field label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--faint); display: block; margin-bottom: 5px; }
-  .field input {
-    width: 100%; background: var(--bg2); border: 1px solid var(--border2);
-    color: var(--text); font-family: var(--mono); font-size: 13px;
-    padding: 8px 10px; border-radius: 6px; outline: none; transition: border .15s;
-  }
-  .field input:focus { border-color: var(--blue); }
-  .field-row { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
-  .settings-actions { display: flex; gap: 10px; margin-top: 20px; }
-  .btn { font-family: var(--mono); font-size: 12px; padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; transition: all .15s; letter-spacing: .06em; }
-  .btn-primary { background: var(--blue2); color: var(--blue); border: 1px solid var(--blue); }
-  .btn-primary:hover { background: var(--blue); color: #fff; }
-  .btn-ghost { background: none; color: var(--dim); border: 1px solid var(--border2); }
-  .btn-ghost:hover { border-color: var(--dim); color: var(--text); }
-  .conn-hint { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-top: 14px; line-height: 1.6; }
+/* GPS status overlay on the map */
+#gps-overlay {
+  position: absolute; top: 10px; left: 10px; z-index: 1000;
+  background: rgba(8,9,11,.82); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 14px;
+  font-family: var(--mono); font-size: 11px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  min-width: 200px;
+}
+#gps-overlay .go-title { font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 6px; }
+.go-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 3px; }
+.go-key { color: var(--faint); }
+.go-val { color: var(--text); font-weight: 600; }
+.go-val.no-fix { color: var(--faint); font-weight: 400; }
 
-  /* ── Driving Hint Bar ───────────────────────── */
-  .hint-bar-wrap { position: relative; height: 6px; background: var(--border); border-radius: 3px; margin-top: 8px; }
-  .hint-bar { height: 100%; border-radius: 3px; transition: width .4s, background .4s; }
-  .hint-labels { display: flex; justify-content: space-between; margin-top: 3px; }
-  .hint-label { font-family: var(--mono); font-size: 9px; color: var(--faint); }
+/* no-GPS notice on map */
+#no-gps-notice {
+  position: absolute; inset: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8,9,11,.6);
+  font-family: var(--mono); font-size: 12px; color: var(--faint);
+  pointer-events: none;
+}
+
+/* power chart strip */
+#chart-strip {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 8px 14px 6px;
+  display: grid;
+  grid-template-rows: 14px 1fr;
+}
+#chart-label { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; color: var(--faint); }
+#powerChart  { height: 60px !important; }
+
+/* ── Right: GPS panel + table + laps + alerts ──────────────────── */
+#panel-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+.rp-sec { padding: 11px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.rp-title { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--faint); margin-bottom: 8px; }
+.kv-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.kv-k { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.kv-v { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); }
+.kv-v.alert-red   { color: var(--red); }
+.kv-v.alert-amber { color: var(--amber); }
+.kv-v.fast        { color: var(--green); }
+.kv-v.slow        { color: var(--red); }
+
+/* data table (scrollable) */
+#table-wrap { overflow-y: auto; flex: 1; }
+#table-wrap::-webkit-scrollbar { width: 4px; }
+#table-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  position: sticky; top: 0; z-index: 2;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .1em;
+  color: var(--faint); text-align: left;
+  padding: 5px 10px; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr:hover { background: var(--card2); }
+tbody td { font-family: var(--mono); font-size: 11px; padding: 4px 10px; }
+.td-key  { color: var(--faint); font-size: 9px; width: 26px; }
+.td-name { color: var(--dim); }
+.td-val  { color: var(--text); font-weight: 600; }
+.td-val.alert-red   { color: var(--red); }
+.td-val.alert-amber { color: var(--amber); }
+td.stale { opacity: .3; }
+
+/* alerts */
+#alerts-wrap { flex-shrink: 0; max-height: 160px; overflow-y: auto; }
+#alerts-wrap::-webkit-scrollbar { width: 4px; }
+#alerts-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.alert-item {
+  font-family: var(--mono); font-size: 10px; line-height: 1.4;
+  padding: 5px 8px; margin: 4px 10px; border-radius: 4px;
+  border-left: 2px solid var(--red); background: rgba(255,59,59,.05);
+}
+.a-time { color: var(--faint); display: block; }
+.a-msg  { color: var(--red); }
+#no-alerts { font-family: var(--mono); font-size: 11px; color: var(--faint); padding: 10px; text-align: center; }
+
+/* ── Settings Overlay ──────────────────────────────────────────── */
+#settings-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(8,9,11,.85); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center;
+}
+#settings-overlay.open { display: flex; }
+#settings-panel {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 28px; width: 430px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.7);
+}
+#settings-panel h2 { font-family: var(--mono); font-size: 13px; letter-spacing: .1em; margin-bottom: 20px; }
+.field { margin-bottom: 13px; }
+.field label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--faint); display: block; margin-bottom: 5px; }
+.field input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--mono); font-size: 13px;
+  padding: 7px 10px; border-radius: 6px; outline: none; transition: border .15s;
+}
+.field input:focus { border-color: var(--blue); }
+.field-row { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+.btn-row { display: flex; gap: 10px; margin-top: 18px; }
+.btn { font-family: var(--mono); font-size: 12px; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; letter-spacing: .06em; transition: all .15s; }
+.btn-primary { background: var(--blue2); color: var(--blue); border: 1px solid var(--blue); }
+.btn-primary:hover { background: var(--blue); color: #fff; }
+.btn-ghost { background: none; color: var(--dim); border: 1px solid var(--border2); }
+.btn-ghost:hover { border-color: var(--dim); color: var(--text); }
+.conn-hint { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-top: 14px; line-height: 1.6; }
+.conn-hint code { color: var(--blue); }
+
+/* ── Map height fix: grid child must be explicitly 100% tall ──── */
+#map-wrap { position: relative; height: 100%; }
+
+/* ── Settings status message ───────────────────────────────────── */
+#s-status {
+  font-family: var(--mono); font-size: 11px; margin-top: 12px;
+  padding: 7px 10px; border-radius: 6px; display: none;
+}
+#s-status.ok   { background: rgba(0,217,126,.08);  color: var(--green); border: 1px solid rgba(0,217,126,.3); }
+#s-status.err  { background: rgba(255,59,59,.08);  color: var(--red);   border: 1px solid rgba(255,59,59,.3); }
+#s-status.busy { background: rgba(255,170,0,.08);  color: var(--amber); border: 1px solid rgba(255,170,0,.3); }
+
+/* ── Leaflet: hide attribution clutter slightly ────────────────── */
+.leaflet-control-attribution { font-size: 9px !important; opacity: .6; }
 </style>
 </head>
 <body>
@@ -214,8 +251,8 @@
     <div id="logo">THAIGER <span>H₂</span> RACING</div>
     <div class="tb-sep"></div>
     <div id="car-tabs">
-      <button class="car-tab active" onclick="switchCar('thaiger7')">THAIGER 7</button>
-      <button class="car-tab" onclick="switchCar('bengalo')">BENGALO</button>
+      <button class="car-tab active" data-car="thaiger7">THAIGER 7</button>
+      <button class="car-tab"        data-car="bengalo">BENGALO</button>
     </div>
     <div class="tb-sep"></div>
     <div id="conn-status">
@@ -225,6 +262,7 @@
     </div>
     <div class="tb-right">
       <span id="timestamp">—</span>
+      <button id="follow-btn" class="active" onclick="toggleFollow()">⊙ FOLLOW</button>
       <button id="settings-btn" onclick="openSettings()">⚙</button>
     </div>
   </div>
@@ -232,78 +270,105 @@
   <!-- ── Main ── -->
   <div id="main">
 
-    <!-- Left Panel: Hero Metrics -->
+    <!-- LEFT: Hero metrics -->
     <div id="panel-left">
+
       <div class="hero-block">
         <div class="hero-label">SPEED</div>
         <div><span class="hero-value" id="h-speed">—</span><span class="hero-unit">km/h</span></div>
         <div class="hero-sub">Avg <span id="h-avgspeed">—</span> km/h</div>
       </div>
+
       <div class="hero-block">
         <div class="hero-label">MOTOR POWER</div>
         <div><span class="hero-value" id="h-power">—</span><span class="hero-unit">W</span></div>
         <div class="hero-sub">U<sub>m</sub> <span id="h-motorv">—</span> V · I<sub>m</sub> <span id="h-motora">—</span> A</div>
       </div>
+
       <div class="hero-block">
         <div class="hero-label">FC TEMPERATURE</div>
         <div><span class="hero-value" id="h-fctemp">—</span><span class="hero-unit">°C</span></div>
         <div class="hero-sub">FC <span id="h-fcv">—</span> V · <span id="h-fca">—</span> A</div>
       </div>
+
       <div class="hero-block">
         <div class="hero-label">SYSTEM EFFICIENCY</div>
         <div><span class="hero-value" id="h-syseff">—</span><span class="hero-unit">%</span></div>
         <div class="hero-sub">FC Eff <span id="h-fceff">—</span> %</div>
       </div>
+
       <div class="hero-block" style="flex:1">
         <div class="hero-label">DRIVING HINT</div>
         <div style="font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:4px;" id="h-hint-label">—</div>
-        <div class="hint-bar-wrap">
-          <div class="hint-bar" id="h-hint-bar" style="width:50%;background:var(--blue)"></div>
-        </div>
-        <div class="hint-labels"><span class="hint-label">SLOWER</span><span class="hint-label">FASTER</span></div>
+        <div class="hint-bar-wrap"><div class="hint-bar" id="h-hint-bar" style="width:50%;background:var(--blue)"></div></div>
+        <div class="hint-labels"><span class="hint-lbl">SLOWER</span><span class="hint-lbl">FASTER</span></div>
       </div>
+
     </div>
 
-    <!-- Center Panel: Chart + Table -->
+    <!-- CENTER: Map + power chart -->
     <div id="panel-center">
-      <div id="chart-wrap">
-        <div id="chart-label">MOTOR POWER HISTORY (last 120 frames)</div>
+
+      <div id="map-wrap">
+        <div id="map"></div>
+
+        <!-- GPS info overlay on map -->
+        <div id="gps-overlay">
+          <div class="go-title">GPS</div>
+          <div class="go-row"><span class="go-key">Lat</span><span class="go-val no-fix" id="go-lat">No fix</span></div>
+          <div class="go-row"><span class="go-key">Lon</span><span class="go-val no-fix" id="go-lon">—</span></div>
+          <div class="go-row"><span class="go-key">Alt</span><span class="go-val" id="go-alt">—</span></div>
+          <div class="go-row"><span class="go-key">Speed</span><span class="go-val" id="go-spd">—</span></div>
+          <div class="go-row"><span class="go-key">Heading</span><span class="go-val" id="go-hdg">—</span></div>
+          <div class="go-row"><span class="go-key">Accuracy</span><span class="go-val" id="go-acc">—</span></div>
+          <div class="go-row"><span class="go-key">Points</span><span class="go-val" id="go-pts">0</span></div>
+        </div>
+
+        <div id="no-gps-notice">Waiting for GPS fix…</div>
+      </div>
+
+      <div id="chart-strip">
+        <div id="chart-label">MOTOR POWER — last 120 frames</div>
         <canvas id="powerChart"></canvas>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Lap timing + data table + alerts -->
+    <div id="panel-right">
+
+      <div class="rp-sec">
+        <div class="rp-title">LAP TIMING</div>
+        <div class="kv-row"><span class="kv-k">Lap</span><span class="kv-v" id="r-laps">—</span></div>
+        <div class="kv-row"><span class="kv-k">Total time</span><span class="kv-v" id="r-total">—</span></div>
+        <div class="kv-row"><span class="kv-k">Target lap</span><span class="kv-v" id="r-target">—</span></div>
+        <div class="kv-row"><span class="kv-k">Opt. speed</span><span class="kv-v" id="r-optspd">—</span></div>
+      </div>
+
+      <div class="rp-sec">
+        <div class="rp-title">FC HEALTH</div>
+        <div class="kv-row"><span class="kv-k">Cell Diff</span><span class="kv-v" id="r-celldiff">—</span></div>
+        <div class="kv-row"><span class="kv-k">Air Pump</span><span class="kv-v" id="r-airpump">—</span></div>
+        <div class="kv-row"><span class="kv-k">FC Energy</span><span class="kv-v" id="r-fcenergy">—</span></div>
+        <div class="kv-row"><span class="kv-k">Mot Energy</span><span class="kv-v" id="r-motenergy">—</span></div>
+      </div>
+
+      <div class="rp-sec" style="padding-bottom:6px">
+        <div class="rp-title">ALL CHANNELS</div>
       </div>
       <div id="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>KEY</th><th>FIELD</th><th>VALUE</th><th>UNIT</th>
-            </tr>
-          </thead>
+          <thead><tr><th>KEY</th><th>FIELD</th><th>VALUE</th><th>UNIT</th></tr></thead>
           <tbody id="data-table-body"></tbody>
         </table>
       </div>
-    </div>
 
-    <!-- Right Panel: Lap + Alerts -->
-    <div id="panel-right">
-      <div class="rp-section">
-        <div class="rp-title">LAP TIMING</div>
-        <div class="lap-row"><span class="lap-key">Lap</span><span class="lap-val" id="r-laps">—</span></div>
-        <div class="lap-row"><span class="lap-key">Total time</span><span class="lap-val" id="r-total">—</span></div>
-        <div class="lap-row"><span class="lap-key">Target lap</span><span class="lap-val" id="r-target">—</span></div>
-        <div class="lap-row"><span class="lap-key">Opt. speed</span><span class="lap-val" id="r-optspd">—</span></div>
-      </div>
-      <div class="rp-section">
-        <div class="rp-title">FC HEALTH</div>
-        <div class="lap-row"><span class="lap-key">Cell Diff</span><span class="lap-val" id="r-celldiff">—</span></div>
-        <div class="lap-row"><span class="lap-key">Air Pump</span><span class="lap-val" id="r-airpump">—</span></div>
-        <div class="lap-row"><span class="lap-key">FC Energy</span><span class="lap-val" id="r-fcenergy">—</span></div>
-        <div class="lap-row"><span class="lap-key">Mot Energy</span><span class="lap-val" id="r-motenergy">—</span></div>
-      </div>
-      <div class="rp-section" style="flex:0">
+      <div class="rp-sec" style="padding-bottom:6px">
         <div class="rp-title">ALERT LOG</div>
       </div>
-      <div id="alerts-list"><div id="no-alerts">No alerts</div></div>
-    </div>
+      <div id="alerts-wrap"><div id="no-alerts">No alerts</div></div>
 
+    </div>
   </div>
 </div>
 
@@ -312,122 +377,182 @@
   <div id="settings-panel">
     <h2>MQTT BROKER SETTINGS</h2>
     <div class="field field-row">
-      <div>
-        <label>BROKER HOST</label>
-        <input id="s-host" type="text" placeholder="abc123.s1.eu.hivemq.cloud">
-      </div>
-      <div>
-        <label>PORT</label>
-        <input id="s-port" type="number" value="8884">
-      </div>
+      <div><label>BROKER HOST</label><input id="s-host" type="text" placeholder="abc.s1.eu.hivemq.cloud"></div>
+      <div><label>PORT (WSS)</label><input id="s-port" type="number" value="8884"></div>
     </div>
-    <div class="field">
-      <label>USERNAME</label>
-      <input id="s-user" type="text">
+    <div class="field"><label>USERNAME</label><input id="s-user" type="text"></div>
+    <div class="field"><label>PASSWORD</label><input id="s-pass" type="password"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="s-connect-btn" onclick="saveAndConnect()">Connect</button>
+      <button class="btn btn-ghost"   onclick="closeSettings()">Cancel</button>
     </div>
-    <div class="field">
-      <label>PASSWORD</label>
-      <input id="s-pass" type="password">
-    </div>
-    <div class="settings-actions">
-      <button class="btn btn-primary" onclick="saveAndConnect()">Connect</button>
-      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
-    </div>
+    <div id="s-status"></div>
     <p class="conn-hint">
-      Port 8884 = MQTT over WebSocket TLS (HiveMQ Cloud standard).<br>
-      Topic: <code style="color:var(--blue)">thaiger/&lt;car&gt;/telemetry</code>
+      Port <strong>8884</strong> = MQTT over WebSocket TLS (HiveMQ Cloud default).<br>
+      Topics: <code>thaiger/&lt;car&gt;/telemetry</code> · <code>thaiger/&lt;car&gt;/gps</code>
     </p>
   </div>
 </div>
 
 <script>
-// ─── Config ────────────────────────────────────────────────────────────
-const FC_TEMP_ALERT_C = 70;
-const CELL_DIFF_ALERT_MV = 50;
-const POWER_HISTORY_SIZE = 120;
-const STALE_TIMEOUT_MS = 3000;
+// ─── Constants ─────────────────────────────────────────────────────────
+const FC_TEMP_ALERT_C     = 70;
+const CELL_DIFF_ALERT_MV  = 50;
+const POWER_HISTORY       = 120;
+const STALE_MS            = 3000;
+const TRACK_MAX_PTS       = 2000;  // max GPS points kept in memory
 
 // ─── State ─────────────────────────────────────────────────────────────
-let client = null;
-let currentCar = 'thaiger7';
-let lastData = {};
-let lastMsgAt = 0;
-let powerHistory = [];
-let alerts = [];
-let staleTimer = null;
+let client         = null;
+let currentCar     = 'thaiger7';
+let lastTelemetry  = {};
+let lastMsgAt      = 0;
+let powerHistory   = [];
+let alerts         = [];
+let staleTimer     = null;
+let followMap      = true;
+let gpsPoints      = [];       // [{lat,lon}]
+let hasGpsFix      = false;
 
-// ─── Field Definitions ────────────────────────────────────────────────
+// ─── Map ───────────────────────────────────────────────────────────────
+// Wrapped in try/catch so a CDN failure or zero-size container cannot
+// stop the rest of the script (settings, MQTT, table) from initialising.
+let map, trackLine, accCircle;
+try {
+  map = L.map('map', { zoomControl: true, attributionControl: true })
+          .setView([13.756, 100.502], 15);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(map);
+
+  trackLine = L.polyline([], {
+    color: '#3D6FFF', weight: 3, opacity: .85, smoothFactor: 1,
+  }).addTo(map);
+
+  accCircle = L.circle([0, 0], {
+    radius: 0, color: '#3D6FFF', fillColor: '#3D6FFF',
+    fillOpacity: .08, weight: 1, opacity: .4,
+  }).addTo(map);
+} catch(e) {
+  console.error('Map init failed:', e);
+  document.getElementById('no-gps-notice').textContent = 'Map unavailable — check browser console';
+}
+
+// Position marker — arrow div icon that rotates with heading
+function makeArrowIcon(headingDeg) {
+  return L.divIcon({
+    className: '',
+    iconSize:  [28, 28],
+    iconAnchor:[14, 14],
+    html: `<div style="
+      width:28px;height:28px;
+      display:flex;align-items:center;justify-content:center;
+      transform:rotate(${headingDeg}deg);
+      filter:drop-shadow(0 0 4px rgba(0,217,126,.6));">
+      <svg width="28" height="28" viewBox="0 0 28 28">
+        <polygon points="14,3 22,24 14,20 6,24" fill="#00D97E" stroke="#08090B" stroke-width="1.5"/>
+      </svg>
+    </div>`,
+  });
+}
+
+let posMarker = null;
+let lastHeading = 0;
+
+function updateMapPosition(lat, lon, accM, headingDeg) {
+  if (!map) return;   // map failed to initialise
+  const latlng = [lat, lon];
+
+  if (!posMarker) {
+    posMarker = L.marker(latlng, { icon: makeArrowIcon(headingDeg), zIndexOffset: 100 }).addTo(map);
+  } else {
+    posMarker.setLatLng(latlng);
+    if (Math.abs(headingDeg - lastHeading) > 2) {
+      posMarker.setIcon(makeArrowIcon(headingDeg));
+      lastHeading = headingDeg;
+    }
+  }
+
+  if (accCircle) accCircle.setLatLng(latlng).setRadius(accM || 0);
+
+  gpsPoints.push(latlng);
+  if (gpsPoints.length > TRACK_MAX_PTS) gpsPoints.shift();
+  if (trackLine) trackLine.setLatLngs(gpsPoints);
+
+  if (followMap) map.panTo(latlng, { animate: true, duration: 0.5 });
+
+  document.getElementById('no-gps-notice').style.display = 'none';
+  document.getElementById('go-pts').textContent = gpsPoints.length;
+}
+
+function toggleFollow() {
+  followMap = !followMap;
+  const btn = document.getElementById('follow-btn');
+  btn.classList.toggle('active', followMap);
+}
+
+// ─── Field Definitions ─────────────────────────────────────────────────
 const FIELDS = [
-  { key:'A',    name:'Speed',          unit:'km/h',   alert: v=>v<25,   alertClass:'alert-amber' },
-  { key:'B',    name:'Avg Speed',      unit:'km/h' },
-  { key:'C',    name:'Laps',           unit:'' },
-  { key:'D',    name:'Total Time',     unit:'' },
-  { key:'E',    name:'Target Lap',     unit:'' },
-  { key:'F',    name:'Opt. Speed',     unit:'km/h' },
-  { key:'G',    name:'FC Voltage',     unit:'V' },
-  { key:'H',    name:'Supercap V',     unit:'V' },
-  { key:'I',    name:'Motor V',        unit:'V' },
-  { key:'J',    name:'FC Current',     unit:'A' },
-  { key:'K',    name:'Supercap A',     unit:'A' },
-  { key:'L',    name:'Motor A',        unit:'A' },
-  { key:'M',    name:'Own Cons.',      unit:'A' },
-  { key:'N',    name:'FC Temp',        unit:'°C',     alert: v=>v>FC_TEMP_ALERT_C, alertClass:'alert-red' },
-  { key:'O',    name:'Air Pump Duty',  unit:'%' },
-  { key:'P',    name:'Drive Hint',     unit:'0-100' },
-  { key:'Q',    name:'Cell Volt Diff', unit:'mV',     alert: v=>v>CELL_DIFF_ALERT_MV, alertClass:'alert-red' },
-  { key:'R',    name:'FC Energy',      unit:'Ws' },
-  { key:'S',    name:'Motor Energy',   unit:'Ws' },
-  { key:'T',    name:'FC Efficiency',  unit:'%' },
-  { key:'U',    name:'Sys Efficiency', unit:'%' },
-  { key:'dist', name:'Distance (Phone)',unit:'km' },
+  { key:'A',    name:'Speed',           unit:'km/h',    alert: v=>v<25, alertClass:'alert-amber' },
+  { key:'B',    name:'Avg Speed',       unit:'km/h' },
+  { key:'C',    name:'Laps',            unit:'' },
+  { key:'D',    name:'Total Time',      unit:'' },
+  { key:'E',    name:'Target Lap',      unit:'' },
+  { key:'F',    name:'Opt. Speed',      unit:'km/h' },
+  { key:'G',    name:'FC Voltage',      unit:'V' },
+  { key:'H',    name:'Supercap V',      unit:'V' },
+  { key:'I',    name:'Motor V',         unit:'V' },
+  { key:'J',    name:'FC Current',      unit:'A' },
+  { key:'K',    name:'Supercap A',      unit:'A' },
+  { key:'L',    name:'Motor A',         unit:'A' },
+  { key:'M',    name:'Own Cons.',       unit:'A' },
+  { key:'N',    name:'FC Temp',         unit:'°C',      alert: v=>v>FC_TEMP_ALERT_C, alertClass:'alert-red' },
+  { key:'O',    name:'Air Pump Duty',   unit:'%' },
+  { key:'P',    name:'Drive Hint',      unit:'0–100' },
+  { key:'Q',    name:'Cell Volt Diff',  unit:'mV',      alert: v=>v>CELL_DIFF_ALERT_MV, alertClass:'alert-red' },
+  { key:'R',    name:'FC Energy',       unit:'Ws' },
+  { key:'S',    name:'Motor Energy',    unit:'Ws' },
+  { key:'T',    name:'FC Efficiency',   unit:'%' },
+  { key:'U',    name:'Sys Efficiency',  unit:'%' },
+  { key:'dist', name:'Distance (phone)', unit:'km' },
 ];
 
-// ─── Build table rows ─────────────────────────────────────────────────
+// ─── Build data table ──────────────────────────────────────────────────
 function buildTable() {
   const tbody = document.getElementById('data-table-body');
-  tbody.innerHTML = '';
   for (const f of FIELDS) {
     const tr = document.createElement('tr');
-    tr.id = 'row-' + f.key;
     tr.innerHTML = `
       <td class="td-key">${f.key}</td>
       <td class="td-name">${f.name}</td>
       <td class="td-val" id="val-${f.key}">—</td>
-      <td class="td-unit">${f.unit}</td>`;
+      <td class="td-unit" style="font-family:var(--mono);font-size:9px;color:var(--faint)">${f.unit}</td>`;
     tbody.appendChild(tr);
   }
 }
 
-// ─── Chart ────────────────────────────────────────────────────────────
+// ─── Power chart ───────────────────────────────────────────────────────
 let powerChart;
 function initChart() {
   const ctx = document.getElementById('powerChart').getContext('2d');
   powerChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: Array(POWER_HISTORY_SIZE).fill(''),
+      labels: Array(POWER_HISTORY).fill(''),
       datasets: [{
-        data: Array(POWER_HISTORY_SIZE).fill(null),
-        borderColor: '#3D6FFF',
-        backgroundColor: 'rgba(61,111,255,.12)',
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: true,
-        tension: 0.3,
+        data: Array(POWER_HISTORY).fill(null),
+        borderColor: '#3D6FFF', backgroundColor: 'rgba(61,111,255,.1)',
+        borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.3,
       }]
     },
     options: {
-      animation: false,
-      responsive: true,
-      maintainAspectRatio: false,
+      animation: false, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { enabled: false } },
       scales: {
         x: { display: false },
-        y: {
-          display: true,
-          grid: { color: '#1E2530' },
-          ticks: { color: '#3D4F60', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 3 }
-        }
+        y: { grid: { color: '#1E2530' }, ticks: { color: '#3D4F60', font: { family: 'JetBrains Mono', size: 9 }, maxTicksLimit: 3 } }
       }
     }
   });
@@ -435,82 +560,94 @@ function initChart() {
 
 function pushPower(w) {
   powerHistory.push(w);
-  if (powerHistory.length > POWER_HISTORY_SIZE) powerHistory.shift();
-  powerChart.data.datasets[0].data = [...powerHistory, ...Array(POWER_HISTORY_SIZE - powerHistory.length).fill(null)].slice(-POWER_HISTORY_SIZE);
+  if (powerHistory.length > POWER_HISTORY) powerHistory.shift();
+  const padded = [...Array(POWER_HISTORY - powerHistory.length).fill(null), ...powerHistory];
+  powerChart.data.datasets[0].data = padded;
   powerChart.update('none');
 }
 
-// ─── MQTT ─────────────────────────────────────────────────────────────
+// ─── MQTT ──────────────────────────────────────────────────────────────
 function connect(host, port, user, pass) {
   if (client) { try { client.end(true); } catch(_) {} }
   setStatus('connecting');
+  setSettingsStatus('busy', 'Connecting to ' + host + ':' + port + '…');
 
-  const url = `wss://${host}:${port}/mqtt`;
+  const url      = `wss://${host}:${port}/mqtt`;
   const clientId = 'engineer-' + Math.random().toString(36).slice(2, 8);
 
-  client = mqtt.connect(url, {
-    clientId, username: user, password: pass,
-    reconnectPeriod: 3000, connectTimeout: 10000,
-    rejectUnauthorized: true,
-  });
+  const opts = { clientId, reconnectPeriod: 3000, connectTimeout: 10000 };
+  if (user) opts.username = user;   // omit entirely when blank — brokers
+  if (pass) opts.password = pass;   // reject empty-string credentials
+
+  client = mqtt.connect(url, opts);
 
   client.on('connect', () => {
     setStatus('connected');
-    const topic = `thaiger/${currentCar}/telemetry`;
-    client.subscribe(topic, { qos: 0 });
-    addAlert('INFO', `Subscribed to ${topic}`);
+    setSettingsStatus('ok', 'Connected — closing…');
+    setTimeout(closeSettings, 800);
+    subscribeAll();
   });
 
   client.on('message', (topic, payload) => {
-    const rxAt = Date.now();
-    const lag = rxAt - lastMsgAt;
-    lastMsgAt = rxAt;
-    updateLatency(lag > 0 && lag < 10000 ? lag : null);
+    const now = Date.now();
+    const lag  = lastMsgAt > 0 ? now - lastMsgAt : null;
+    lastMsgAt  = now;
+    updateLatency(lag && lag < 10000 ? lag : null);
 
-    try { handleFrame(JSON.parse(payload.toString())); }
-    catch(e) { console.warn('Parse error:', e); }
+    try {
+      const d = JSON.parse(payload.toString());
+      if (topic.endsWith('/gps'))            handleGps(d);
+      else if (topic.endsWith('/telemetry')) handleTelemetry(d);
+    } catch(e) { console.warn('parse error', e); }
 
     resetStaleTimer();
   });
 
-  client.on('offline', () => setStatus('connecting'));
-  client.on('error', e => { setStatus('error'); console.error(e); });
+  client.on('offline', () => {
+    setStatus('connecting');
+    setSettingsStatus('err', 'Broker unreachable — check host / port / credentials');
+  });
+  client.on('error', (e) => {
+    setStatus('error');
+    setSettingsStatus('err', 'Error: ' + (e.message || e));
+  });
   client.on('close', () => setStatus('disconnected'));
+}
+
+function subscribeAll() {
+  client.subscribe(`thaiger/${currentCar}/telemetry`, { qos: 0 });
+  client.subscribe(`thaiger/${currentCar}/gps`,       { qos: 0 });
 }
 
 function switchCar(car) {
   if (car === currentCar) return;
+  const prev = currentCar;
   currentCar = car;
-  document.querySelectorAll('.car-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.car-tab[onclick*="${car}"]`).classList.add('active');
-  lastData = {};
-  clearHero();
-
+  document.querySelectorAll('.car-tab').forEach(t => t.classList.toggle('active', t.dataset.car === car));
+  clearState();
   if (client && client.connected) {
-    client.unsubscribe(`thaiger/${car === 'thaiger7' ? 'bengalo' : 'thaiger7'}/telemetry`);
-    client.subscribe(`thaiger/${car}/telemetry`, { qos: 0 });
+    client.unsubscribe(`thaiger/${prev}/telemetry`);
+    client.unsubscribe(`thaiger/${prev}/gps`);
+    subscribeAll();
   }
 }
 
-// ─── Data Handling ────────────────────────────────────────────────────
-function handleFrame(d) {
-  lastData = d;
+// ─── Telemetry frame ───────────────────────────────────────────────────
+function handleTelemetry(d) {
+  lastTelemetry = d;
 
   // Hero: Speed
   const spd = d.A;
   if (spd != null) {
     const el = document.getElementById('h-speed');
-    el.textContent = typeof spd === 'number' ? spd.toFixed(1) : spd;
+    el.textContent = spd.toFixed(1);
     el.className = 'hero-value' + (spd < 25 ? ' amber' : '');
   }
   setText('h-avgspeed', d.B, 1);
 
-  // Hero: Power (I * L = motor V * motor A)
+  // Hero: Power
   const pwr = d.I != null && d.L != null ? d.I * d.L : null;
-  if (pwr != null) {
-    document.getElementById('h-power').textContent = pwr.toFixed(0);
-    pushPower(pwr);
-  }
+  if (pwr != null) { document.getElementById('h-power').textContent = pwr.toFixed(0); pushPower(pwr); }
   setText('h-motorv', d.I, 1);
   setText('h-motora', d.L, 1);
 
@@ -521,62 +658,40 @@ function handleFrame(d) {
     el.className = 'hero-value' + (d.N > FC_TEMP_ALERT_C ? ' red' : '');
     if (d.N > FC_TEMP_ALERT_C) addAlert('FC TEMP', `${d.N.toFixed(1)} °C > ${FC_TEMP_ALERT_C} °C`);
   }
-  setText('h-fcv', d.G, 1);
-  setText('h-fca', d.J, 1);
+  setText('h-fcv', d.G, 1);  setText('h-fca', d.J, 1);
 
   // Hero: Efficiency
-  setText('h-syseff', d.U, 0);
-  setText('h-fceff', d.T, 0);
+  setText('h-syseff', d.U, 0); setText('h-fceff', d.T, 0);
 
-  // Hero: Driving hint (P: 0-50 slower, 50-100 faster)
+  // Hero: Driving hint
   if (d.P != null) {
-    const p = d.P;
-    const pct = Math.max(0, Math.min(100, p));
+    const p = d.P, pct = Math.max(0, Math.min(100, p));
     const bar = document.getElementById('h-hint-bar');
     const lbl = document.getElementById('h-hint-label');
     bar.style.width = pct + '%';
-    if (p < 45) {
-      bar.style.background = '#FFAA00';
-      lbl.textContent = `${p.toFixed(0)} — Slow down`;
-      lbl.style.color = '#FFAA00';
-    } else if (p > 55) {
-      bar.style.background = '#00D97E';
-      lbl.textContent = `${p.toFixed(0)} — Speed up`;
-      lbl.style.color = '#00D97E';
-    } else {
-      bar.style.background = '#3D6FFF';
-      lbl.textContent = `${p.toFixed(0)} — On target`;
-      lbl.style.color = '#7A8A99';
-    }
+    if (p < 45)       { bar.style.background='#FFAA00'; lbl.style.color='#FFAA00'; lbl.textContent=`${p.toFixed(0)} — Slow down`; }
+    else if (p > 55)  { bar.style.background='#00D97E'; lbl.style.color='#00D97E'; lbl.textContent=`${p.toFixed(0)} — Speed up`; }
+    else              { bar.style.background='#3D6FFF'; lbl.style.color='#7A8A99'; lbl.textContent=`${p.toFixed(0)} — On target`; }
   }
 
-  // Right panel: lap timing
-  setEl('r-laps', d.C != null ? `Lap ${d.C}` : '—');
-  setEl('r-total', d.D || '—');
-  setEl('r-target', d.E || '—');
+  // Right: Lap
+  setEl('r-laps',    d.C != null ? `Lap ${d.C}` : '—');
+  setEl('r-total',   d.D || '—');
+  setEl('r-target',  d.E || '—');
   setText('r-optspd', d.F, 1, 'km/h');
 
-  // Right panel: FC health
+  // Right: FC health
   if (d.Q != null) {
     const el = document.getElementById('r-celldiff');
     el.textContent = d.Q.toFixed(0) + ' mV';
-    el.className = 'lap-val' + (d.Q > CELL_DIFF_ALERT_MV ? ' slow' : '');
+    el.className = 'kv-v' + (d.Q > CELL_DIFF_ALERT_MV ? ' alert-red' : '');
     if (d.Q > CELL_DIFF_ALERT_MV) addAlert('CELL DIFF', `${d.Q.toFixed(0)} mV > ${CELL_DIFF_ALERT_MV} mV`);
   }
   setText('r-airpump', d.O, 0, '%');
-  if (d.R != null) setEl('r-fcenergy', (d.R / 3600).toFixed(2) + ' Wh');
+  if (d.R != null) setEl('r-fcenergy',  (d.R / 3600).toFixed(2) + ' Wh');
   if (d.S != null) setEl('r-motenergy', (d.S / 3600).toFixed(2) + ' Wh');
 
   // Data table
-  updateTable(d);
-
-  // Timestamp
-  const now = new Date();
-  document.getElementById('timestamp').textContent =
-    now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0');
-}
-
-function updateTable(d) {
   for (const f of FIELDS) {
     const raw = d[f.key];
     const el  = document.getElementById('val-' + f.key);
@@ -586,123 +701,157 @@ function updateTable(d) {
     el.textContent = isNum ? raw.toFixed(raw > 100 ? 0 : raw > 10 ? 1 : 2) : raw;
     el.className = 'td-val' + (f.alert && f.alert(raw) ? ` ${f.alertClass}` : '');
   }
+
+  // Timestamp
+  const now = new Date();
+  document.getElementById('timestamp').textContent =
+    now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0');
 }
 
-// ─── Alert Log ────────────────────────────────────────────────────────
+// ─── GPS frame ─────────────────────────────────────────────────────────
+function handleGps(d) {
+  if (d.lat == null || d.lon == null) return;
+
+  hasGpsFix = true;
+  const hdg = d.hdg ?? 0;
+  const acc = d.acc ?? 0;
+
+  updateMapPosition(d.lat, d.lon, acc, hdg);
+
+  // GPS info overlay
+  const latEl = document.getElementById('go-lat');
+  const lonEl = document.getElementById('go-lon');
+  latEl.textContent = d.lat.toFixed(6) + '°';
+  lonEl.textContent = d.lon.toFixed(6) + '°';
+  latEl.classList.remove('no-fix'); lonEl.classList.remove('no-fix');
+
+  setEl('go-alt', d.alt  != null ? d.alt.toFixed(1)  + ' m'   : '—');
+  setEl('go-spd', d.spd  != null ? d.spd.toFixed(1)  + ' km/h': '—');
+  setEl('go-hdg', d.hdg  != null ? d.hdg.toFixed(1)  + '°'    : '—');
+  setEl('go-acc', d.acc  != null ? '±' + d.acc.toFixed(1) + ' m': '—');
+}
+
+// ─── Alert log ─────────────────────────────────────────────────────────
 const alertDedup = {};
 function addAlert(type, msg) {
-  const key = type + msg;
-  const now = Date.now();
-  if (alertDedup[key] && now - alertDedup[key] < 5000) return; // deduplicate
+  const key = type + msg, now = Date.now();
+  if (alertDedup[key] && now - alertDedup[key] < 5000) return;
   alertDedup[key] = now;
-
   alerts.unshift({ type, msg, ts: new Date().toTimeString().slice(0, 8) });
   if (alerts.length > 20) alerts.pop();
   renderAlerts();
 }
 
 function renderAlerts() {
-  const list = document.getElementById('alerts-list');
-  if (alerts.length === 0) {
-    list.innerHTML = '<div id="no-alerts">No alerts</div>';
-    return;
-  }
-  list.innerHTML = alerts.map(a => `
-    <div class="alert-item">
-      <span class="a-time">${a.ts}</span>
-      <span class="a-msg">${a.type}: ${a.msg}</span>
-    </div>`).join('');
+  const wrap = document.getElementById('alerts-wrap');
+  wrap.innerHTML = alerts.length === 0
+    ? '<div id="no-alerts">No alerts</div>'
+    : alerts.map(a => `<div class="alert-item"><span class="a-time">${a.ts}</span><span class="a-msg">${a.type}: ${a.msg}</span></div>`).join('');
 }
 
-// ─── Stale Detection ──────────────────────────────────────────────────
+// ─── Stale detection ───────────────────────────────────────────────────
 function resetStaleTimer() {
   clearTimeout(staleTimer);
   document.querySelectorAll('.td-val, .hero-value').forEach(el => el.classList.remove('stale'));
   staleTimer = setTimeout(() => {
     document.querySelectorAll('.td-val, .hero-value').forEach(el => el.classList.add('stale'));
     setStatus('stale');
-  }, STALE_TIMEOUT_MS);
+  }, STALE_MS);
 }
 
-// ─── Status ───────────────────────────────────────────────────────────
+// ─── Status ────────────────────────────────────────────────────────────
 function setStatus(s) {
-  const dot   = document.getElementById('conn-dot');
-  const label = document.getElementById('conn-label');
+  const dot = document.getElementById('conn-dot'), lbl = document.getElementById('conn-label');
   dot.className = 'dot';
   switch (s) {
-    case 'connected':    dot.classList.add('connected');  label.textContent = 'Live'; break;
-    case 'connecting':   dot.classList.add('connecting'); label.textContent = 'Connecting…'; break;
-    case 'stale':        dot.classList.add('connecting'); label.textContent = 'Stale'; break;
-    case 'error':        dot.classList.add('error');      label.textContent = 'Error'; break;
-    default:             label.textContent = 'Disconnected';
+    case 'connected':  dot.classList.add('connected');  lbl.textContent = 'Live';         break;
+    case 'connecting': dot.classList.add('connecting'); lbl.textContent = 'Connecting…';  break;
+    case 'stale':      dot.classList.add('connecting'); lbl.textContent = 'Stale';        break;
+    case 'error':      dot.classList.add('error');      lbl.textContent = 'Error';        break;
+    default:                                            lbl.textContent = 'Disconnected'; break;
   }
 }
+function updateLatency(ms) { document.getElementById('latency').textContent = ms ? `${ms}ms` : ''; }
 
-function updateLatency(ms) {
-  const el = document.getElementById('latency');
-  el.textContent = ms != null ? `${ms}ms` : '';
-}
-
-// ─── Settings ─────────────────────────────────────────────────────────
+// ─── Settings ──────────────────────────────────────────────────────────
 function openSettings() {
-  const cfg = loadConfig();
-  document.getElementById('s-host').value = cfg.host || '';
-  document.getElementById('s-port').value = cfg.port || '8884';
-  document.getElementById('s-user').value = cfg.user || '';
-  document.getElementById('s-pass').value = cfg.pass || '';
+  const c = loadCfg();
+  document.getElementById('s-host').value = c.host || '';
+  document.getElementById('s-port').value = c.port || '8884';
+  document.getElementById('s-user').value = c.user || '';
+  document.getElementById('s-pass').value = c.pass || '';
+  setSettingsStatus('', '');   // clear any previous status
   document.getElementById('settings-overlay').classList.add('open');
 }
-function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
 function saveAndConnect() {
-  const cfg = {
-    host: document.getElementById('s-host').value.trim(),
-    port: document.getElementById('s-port').value.trim(),
-    user: document.getElementById('s-user').value.trim(),
-    pass: document.getElementById('s-pass').value,
-  };
-  localStorage.setItem('thaiger_mqtt_cfg', JSON.stringify(cfg));
-  closeSettings();
-  connect(cfg.host, cfg.port, cfg.user, cfg.pass);
-}
-function loadConfig() {
-  try { return JSON.parse(localStorage.getItem('thaiger_mqtt_cfg') || '{}'); } catch(_) { return {}; }
+  const host = document.getElementById('s-host').value.trim();
+  const port = document.getElementById('s-port').value.trim() || '8884';
+  const user = document.getElementById('s-user').value.trim();
+  const pass = document.getElementById('s-pass').value;
+
+  if (!host) {
+    setSettingsStatus('err', 'Broker host is required');
+    document.getElementById('s-host').focus();
+    return;
+  }
+
+  localStorage.setItem('thaiger_cfg', JSON.stringify({ host, port, user, pass }));
+  // Dialog stays open — connect() will close it on success or show error on failure
+  connect(host, port, user, pass);
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────
-function setEl(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-function setText(id, val, dp, suffix) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = val != null ? (typeof val === 'number' ? val.toFixed(dp || 0) : val) + (suffix ? ' ' + suffix : '') : '—';
-}
-function clearHero() {
-  ['h-speed','h-avgspeed','h-power','h-motorv','h-motora','h-fctemp','h-fcv','h-fca','h-syseff','h-fceff'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.textContent = '—'; el.className = el.className.replace(/ (red|amber|green)/g,''); }
-  });
-  ['r-laps','r-total','r-target','r-optspd','r-celldiff','r-airpump','r-fcenergy','r-motenergy'].forEach(id => setEl(id, '—'));
+function setSettingsStatus(type, msg) {
+  const el = document.getElementById('s-status');
+  if (!msg) { el.style.display = 'none'; el.className = ''; return; }
+  el.textContent = msg;
+  el.className   = type;   // 'ok' | 'err' | 'busy'
+  el.style.display = 'block';
 }
 
-// ─── Close settings on ESC or outside click ───────────────────────────
-document.getElementById('settings-overlay').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeSettings();
-});
+function loadCfg() {
+  try { return JSON.parse(localStorage.getItem('thaiger_cfg') || '{}'); } catch(_) { return {}; }
+}
+
+// ─── Car tab wiring ────────────────────────────────────────────────────
+document.querySelectorAll('.car-tab').forEach(btn =>
+  btn.addEventListener('click', () => switchCar(btn.dataset.car)));
+
+// ─── Clear state on car switch ─────────────────────────────────────────
+function clearState() {
+  gpsPoints = []; hasGpsFix = false;
+  trackLine.setLatLngs([]);
+  if (posMarker) { map.removeLayer(posMarker); posMarker = null; }
+  accCircle.setLatLng([0,0]).setRadius(0);
+  document.getElementById('no-gps-notice').style.display = '';
+  document.getElementById('go-lat').textContent = 'No fix';
+  document.getElementById('go-lat').classList.add('no-fix');
+  ['go-lon','go-alt','go-spd','go-hdg','go-acc'].forEach(id => setEl(id, '—'));
+  setEl('go-pts', '0');
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────
+function setEl(id, val)               { const e = document.getElementById(id); if (e) e.textContent = val; }
+function setText(id, val, dp, sfx) {
+  const e = document.getElementById(id); if (!e) return;
+  e.textContent = val != null ? (typeof val === 'number' ? val.toFixed(dp||0) : val) + (sfx ? ' '+sfx : '') : '—';
+}
+
+// ─── ESC / outside-click close settings ───────────────────────────────
+document.getElementById('settings-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeSettings(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
 
-// ─── Init ─────────────────────────────────────────────────────────────
+// ─── Init ──────────────────────────────────────────────────────────────
 buildTable();
 initChart();
 
-// Auto-connect if saved config exists
-const cfg = loadConfig();
-if (cfg.host) {
-  connect(cfg.host, cfg.port || '8884', cfg.user, cfg.pass);
-} else {
-  openSettings(); // first-time: prompt for config
-}
+const cfg = loadCfg();
+if (cfg.host) connect(cfg.host, cfg.port || '8884', cfg.user, cfg.pass);
+else openSettings();
 </script>
 </body>
 </html>

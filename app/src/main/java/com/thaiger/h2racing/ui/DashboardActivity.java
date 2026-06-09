@@ -1,8 +1,12 @@
 package com.thaiger.h2racing.ui;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
@@ -17,10 +21,12 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 
 import com.thaiger.h2racing.App;
 import com.thaiger.h2racing.R;
 import com.thaiger.h2racing.bt.BluetoothService;
+import com.thaiger.h2racing.gps.GpsService;
 import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
 import com.thaiger.h2racing.model.TelemetryModel;
@@ -97,6 +103,17 @@ public class DashboardActivity extends AppCompatActivity {
     private boolean fcTempStickyRed = false;
     private boolean alertDismissed  = false;
     private long    lastPacketAtMs  = 0;
+
+    // ─── 1-second run-time ticker ───
+    private final Handler    tickHandler  = new Handler(Looper.getMainLooper());
+    private final Runnable   tickRunnable = this::tickTimer;
+    /** Wall-clock ms at the moment we last synced from telemetry. */
+    private long timerSyncWallMs   = 0;
+    /** ESP totalTimeSec value at the last sync point. */
+    private int  timerSyncTotalSec = -1;
+
+    // ─── GPS ───
+    private GpsService gpsService;
 
     // ─── Lap tracking ───
     /** Zuletzt empfangener C-Wert. -1 = noch keine Runde gesehen. */
@@ -287,6 +304,38 @@ public class DashboardActivity extends AppCompatActivity {
         if (relayService != null) {
             relayService.setStateListener((s, detail) -> applyRelayState(s));
         }
+        // Start 1-second run-time ticker
+        tickHandler.post(tickRunnable);
+        // Start GPS if permission granted
+        startGps();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        tickHandler.removeCallbacks(tickRunnable);
+        if (gpsService != null) {
+            gpsService.stop();
+            gpsService = null;
+        }
+    }
+
+    private void startGps() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) return;
+        gpsService = new GpsService(this);
+        gpsService.start(location -> {
+            if (relayService != null) relayService.onGps(location);
+        });
+    }
+
+    private void tickTimer() {
+        if (timerSyncTotalSec >= 0) {
+            int elapsed = (int) ((System.currentTimeMillis() - timerSyncWallMs) / 1000);
+            int sec = timerSyncTotalSec + elapsed;
+            tvRunTime.setText(String.format(Locale.US, "%02d:%02d", sec / 60, sec % 60));
+        }
+        tickHandler.postDelayed(tickRunnable, 1000);
     }
 
     /** Letzter bekannter BT-Status — für kombinierte Top-Bar-Anzeige. */
@@ -354,6 +403,12 @@ public class DashboardActivity extends AppCompatActivity {
         // Stats akkumulieren auf JEDES Frame, auch wenn UI gedrosselt → kein Datenverlust
         if (runStats != null) runStats.update(m, fcTempThresholdC);
 
+        // Sync run-time clock on every frame so the 1-second ticker stays accurate
+        if (m.totalTimeSec >= 0) {
+            timerSyncTotalSec = m.totalTimeSec;
+            timerSyncWallMs   = now;
+        }
+
         // Throttle: zu schnelle Frames droppen, um UI-Last und Stromverbrauch zu senken.
         if (now - lastUiUpdateMs < updateRateMs) return;
         long sinceLast = lastUiUpdateMs == 0 ? 0 : (now - lastUiUpdateMs);
@@ -416,12 +471,6 @@ public class DashboardActivity extends AppCompatActivity {
                 // Wert ist nachhaltig unter Threshold gefallen → wieder armed
                 alertDismissed = false;
             }
-        }
-
-        // ─── Top-Bar / Bottom-Bar ───
-        if (m.totalTimeSec >= 0) {
-            int mn = m.totalTimeSec / 60, sc = m.totalTimeSec % 60;
-            tvRunTime.setText(String.format(Locale.US, "%02d:%02d", mn, sc));
         }
 
         // ─── Lap-Detection: C ändert sich → Runde abgeschlossen ───

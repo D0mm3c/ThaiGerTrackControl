@@ -1,238 +1,196 @@
-# Thaiger H2 Racing — Telemetrie-System
+# ThaiGerTrackControl
 
-Echtzeit-Telemetrie für Wasserstoff-Brennstoffzellen-Fahrzeuge der
-**Fachhochschule Stralsund**. Das System überträgt Betriebsdaten
-vom ESP32 per BLE (HM-10) an eine Android-Cockpit-App und leitet
-sie per MQTT an ein stationäres Engineer-Dashboard weiter.
+Android cockpit display for the ThaiGer H2 hydrogen fuel cell racing vehicle. The app receives live telemetry from the car over Bluetooth Low Energy, displays it on a race dashboard, and relays it via MQTT to an engineer's laptop.
 
 ---
 
-## Übersicht
+## Features
 
-```
-ESP32 ──UART 19200 Bd──► HM-10 (BLE 4.0) ──GATT FFE1──► Android-App
-                                                              │
-                                                    MQTT / TLS:8883
-                                                              │
-                                                         HiveMQ Cloud
-                                                              │
-                                                    WebSocket / TLS:8884
-                                                              │
-                                                    engineer_dashboard.html
-```
-
-### Fahrzeuge
-
-| Fahrzeug   | Typ              |
-|------------|-----------------|
-| Thaiger 7  | Prototype · H₂  |
-| Bengalo    | Urban Concept · H₂ |
+- Live telemetry dashboard (speed, power, FC temperature, efficiency, lap times)
+- Threshold-based alerts with haptic and audio feedback
+- Lap timing with live comparison against the previous lap
+- GPS position and speed published alongside telemetry
+- MQTT relay to engineer station over TLS
+- Post-run summary with power graph
+- Two vehicle profiles: **THAIGER 7** and **BENGALO**
+- Demo mode — synthetic data stream without hardware
 
 ---
 
-## Repository-Struktur
+## Screens
+
+| Screen | Purpose |
+|---|---|
+| Car Select | Choose vehicle profile |
+| Connecting | Pair Bluetooth device or start Demo Mode |
+| Dashboard | Live race display (landscape, screen always on) |
+| Post-Run | Run summary — duration, energy, peak power, alert count |
+| Settings | Display options, per-vehicle thresholds |
+| MQTT Settings | Broker host, port, TLS, credentials, publish rate |
+
+---
+
+## Architecture
 
 ```
-thaiger_app/                        Android-Studio-Projekt
-├── app/
-│   ├── build.gradle
-│   └── src/main/
-│       ├── AndroidManifest.xml
-│       ├── java/com/thaiger/h2racing/
-│       │   ├── App.java
-│       │   ├── bt/BluetoothService.java      BLE GATT (HM-10)
-│       │   ├── model/
-│       │   │   ├── TelemetryModel.java        21 Felder + derived
-│       │   │   ├── CarProfile.java            Schwellwerte pro Auto
-│       │   │   └── RunStats.java              Run-Akkumulator
-│       │   ├── parser/TelemetryParser.java    Asterisk-Format-Parser
-│       │   ├── relay/
-│       │   │   ├── FrameRelay.java
-│       │   │   ├── MqttRelayService.java      Paho MQTT + Queue
-│       │   │   └── TelemetryJsonEncoder.java
-│       │   ├── ui/                            6 Activities
-│       │   └── util/
-│       │       ├── Prefs.java                 SharedPreferences-Wrapper
-│       │       └── AlertFx.java               Vibration + Ton
-│       └── res/layout/                        7 XML-Layouts
-│
-engineer_dashboard.html             Engineer-Dashboard (Browser, kein Server)
-thaiger_dokumentation.tex           Vollständige Systemdokumentation (LaTeX)
+BLE Module (car)
+      │  Bluetooth Low Energy (GATT)
+      ▼
+BluetoothService          — connection, reconnect, stream accumulation
+      │
+TelemetryParser           — stateless field extractor (*A28.3**B25.0*…)
+      │
+      ├──► DashboardActivity   — UI thread updates, alert logic, lap tracking
+      │
+      └──► MqttRelayService    — BlockingQueue → RelayThread → Paho publish
+                │
+                ├── thaiger/{car}/telemetry   (JSON, configurable rate 1–10 Hz)
+                └── thaiger/{car}/gps         (JSON, 1 Hz)
+
+GpsService (LocationManager)
+      │
+      └──► MqttRelayService.onGps()
+```
+
+**Threading model**
+
+| Thread | Responsibility |
+|---|---|
+| Main / UI | Activity lifecycle, all view updates |
+| BLE Binder | GATT callbacks — parsed immediately, output marshalled to Main |
+| MQTT-Relay (daemon) | MQTT connection, publish loop |
+
+State is held in the `App` singleton (`BluetoothService`, `MqttRelayService`, `CarProfile`, `RunStats`) so it survives Activity transitions without Bound Service boilerplate.
+
+---
+
+## Telemetry Protocol
+
+The car controller sends ASCII frames over BLE. Each field is enclosed in asterisks with a single-letter key:
+
+```
+*A28.3**B25.0**C3**D15:35**N53.4*…
+```
+
+The parser is stateless and stream-tolerant — it handles partial packets, multi-chunk BLE frames, and missing fields gracefully. The latest known value for each field is kept in a rolling `TelemetryModel`.
+
+### Field reference
+
+| Key | Field | Unit |
+|---|---|---|
+| A | Speed | km/h |
+| B | Average speed | km/h |
+| C | Lap count | — |
+| D | Total run time | mm:ss |
+| E | Target lap time | mm:ss |
+| F | Optimal speed | km/h |
+| G | FC voltage | V |
+| H | Supercap voltage | V |
+| I | Motor voltage | V |
+| J | FC current | A |
+| K | Supercap current | A |
+| L | Motor current | A |
+| M | Own consumption | A |
+| N | FC temperature | °C |
+| O | Air pump duty cycle | % |
+| P | Driving hint | — |
+| Q | Cell voltage difference | mV |
+| R | FC energy cumulative | Ws |
+| S | Motor energy cumulative | Ws |
+| T | FC efficiency | % |
+| U | System efficiency | % |
+
+Distance, motor power, and motor energy in Wh are derived on the phone.
+
+---
+
+## MQTT Topics
+
+All messages are QoS 0 (fire-and-forget). TLS is enabled by default.
+
+### `thaiger/{car_id}/telemetry`
+
+Published at the configured rate (default 1 Hz). Fields match the protocol above plus phone-derived values.
+
+```json
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+```
+
+NaN and unset fields are omitted to keep payloads small (typically 100–200 bytes).
+
+### `thaiger/{car_id}/gps`
+
+Published at 1 Hz when a GPS fix is available.
+
+```json
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+```
+
+| Field | Description | Unit |
+|---|---|---|
+| ts | Unix timestamp | ms |
+| lat | Latitude | ° |
+| lon | Longitude | ° |
+| alt | Altitude (if available) | m |
+| spd | GPS speed (if available) | km/h |
+| acc | Horizontal accuracy (if available) | m |
+| hdg | Bearing (if available) | ° |
+
+---
+
+## Vehicle Profiles
+
+| Profile | Max motor power | Thresholds |
+|---|---|---|
+| THAIGER_7 | 600 W | FC temp, cell diff — configurable in Settings |
+| BENGALO | 900 W | FC temp, cell diff — configurable in Settings |
+
+`CarProfile` provides fallback defaults when Settings have not been customised.
+
+---
+
+## Reconnection
+
+Both BLE and MQTT use exponential backoff on disconnect:
+
+```
+1 s → 2 s → 4 s → 8 s → 16 s (max)
 ```
 
 ---
 
-## Voraussetzungen
+## Permissions
 
-### Android-App
-- Android Studio Hedgehog (2023.1) oder neuer
-- Android-Gerät mit BLE-Support, Android 9+ (getestet: Samsung Galaxy A20, Android 11)
-- HM-10 BLE-Modul am ESP32, Baudrate **19200**
+| Permission | Reason |
+|---|---|
+| `BLUETOOTH_CONNECT` / `BLUETOOTH_SCAN` | BLE pairing and scanning (Android 12+) |
+| `BLUETOOTH` / `BLUETOOTH_ADMIN` | BLE (Android ≤ 11) |
+| `ACCESS_FINE_LOCATION` | BLE scanning (Android ≤ 11) + GPS |
+| `ACCESS_COARSE_LOCATION` | GPS fallback |
+| `INTERNET` | MQTT relay |
+| `WAKE_LOCK` | Keep screen on during run |
+| `VIBRATE` | Alert haptic feedback |
 
-### Engineer-Dashboard
-- Aktueller Browser (Chrome / Firefox)
-- HiveMQ Cloud Account (kostenloser Free-Tier)
+Location permission is requested on the Connecting screen before any GPS use.
 
 ---
 
-## Schnellstart
+## Build
 
-### 1. Android-App bauen
+- **Min SDK**: 28 (Android 9)
+- **Target SDK**: 34
+- **Language**: Java 11
+- **Build system**: Gradle
 
 ```bash
-# Projekt in Android Studio öffnen:
-# File → Open → thaiger_app/   (Wurzel-Ordner)
-# Gradle-Sync abwarten → Run ▶
+./gradlew assembleDebug
 ```
 
-### 2. HM-10 pairen
+Key dependencies (see `app/build.gradle`):
 
-In den System-Bluetooth-Einstellungen des Smartphones das HM-10 einmalig
-pairen (PIN: `000000` oder `1234`).
+| Library | Purpose |
+|---|---|
+| AndroidX AppCompat / CardView / ConstraintLayout | UI |
+| Eclipse Paho MQTT Client 1.2.5 | MQTT relay |
 
-### 3. App starten
-
-1. Fahrzeug wählen → **CONNECT**
-2. HM-10 in der Geräteliste auswählen
-3. Dashboard öffnet sich automatisch
-
-> **Demo Mode** — kein ESP nötig: beim Connecting-Screen
-> **⚙ Demo Mode** auswählen. Generiert synthetischen Telemetrie-Stream.
-
-### 4. Engineer-Dashboard
-
-```bash
-# engineer_dashboard.html im Browser öffnen (Doppelklick)
-# → Einstellungs-Dialog erscheint automatisch
-# Host, Port (8884), Username, Passwort eintragen → Connect
-```
-
----
-
-## Konfiguration
-
-### MQTT-Relay (optional)
-
-In der App: **Einstellungen → MQTT broker →**
-
-| Feld         | Wert                              |
-|--------------|-----------------------------------|
-| Broker host  | `abc123.s1.eu.hivemq.cloud`       |
-| Port (App)   | `8883` (MQTT/TLS)                 |
-| Port (Browser)| `8884` (WebSocket/TLS)           |
-| TLS          | Ein                               |
-| Publish rate | 5 Hz                              |
-
-Topic-Schema: `thaiger/<carId>/telemetry` (`carId` = `thaiger7` oder `bengalo`)
-
-### Schwellwerte (App-Einstellungen)
-
-| Parameter       | Thaiger 7 | Bengalo | Alarm                    |
-|-----------------|-----------|---------|--------------------------|
-| FC Temp max     | 70 °C     | 65 °C   | Rot + Vibration + Banner |
-| Cell Diff max   | 50 mV     | 50 mV   | Rot                      |
-| Min Speed       | 25 km/h   | 25 km/h | Geschwindigkeit rot       |
-
----
-
-## ESP-Protokoll
-
-Format: `*<Key><Wert>*` — Asterisk-eingerahmt, aneinandergereiht.
-
-```
-*A28.3**B25.0**C3**D15:35**E2:15**F25.0**G28.3**H27.4*
-*I27.4**J5.4**K2.7**L8.1**M0.7**N53.4**O63**P65**Q150*
-*R123456**S234567**T70**U70*
-```
-
-| Key | Feld                  | Einheit | Alarm      |
-|-----|-----------------------|---------|------------|
-| A   | Geschwindigkeit       | km/h    | < 25 km/h  |
-| B   | Durchschnittgeschw.   | km/h    |            |
-| C   | Rundenzahl            | —       |            |
-| D   | Gesamtzeit            | mm:ss   |            |
-| E   | Ziel-Rundenzeit       | mm:ss   |            |
-| F   | Optimale Geschw.      | km/h    |            |
-| G–M | Spannungen / Ströme   | V / A   |            |
-| N   | FC-Temperatur         | °C      | > Schwelle |
-| O   | Luftpumpen-Duty       | %       |            |
-| P   | Fahranweisung         | 0–100   |            |
-| Q   | Zellspannungsdiff.    | mV      | > 50 mV    |
-| R   | FC-Energie            | Ws      |            |
-| S   | Motor-Energie         | Ws      |            |
-| T   | FC-Wirkungsgrad       | %       |            |
-| U   | Systemwirkungsgrad    | %       |            |
-
-Vollständige Referenz: **Kapitel 3** der Systemdokumentation.
-
----
-
-## Abhängigkeiten
-
-```groovy
-// app/build.gradle
-implementation 'androidx.appcompat:appcompat:1.6.1'
-implementation 'androidx.cardview:cardview:1.0.0'
-implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-implementation 'androidx.core:core:1.13.1'
-implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
-```
-
----
-
-## Run beenden
-
-**Long-Press** auf den Geschwindigkeitswert im Dashboard → Post-Run-Screen
-mit Statistiken (Duration, Distance, Avg Speed, Peak Power, Max FC Temp,
-Alerts, Power-Graph).
-
----
-
-## Häufige Probleme
-
-| Problem | Lösung |
-|---------|--------|
-| HM-10 nicht in Liste | Erst in Android-Bluetooth-Einstellungen pairen |
-| GATT Error 133 | Bluetooth aus/ein, Modul-Neustart |
-| Keine Daten | HM-10 Baudrate = 19200 (`AT+BAUD2`) prüfen |
-| RELAY ✕ | Internetverbindung + Broker-Credentials prüfen |
-| Dashboard leer | Port 8884 (WebSocket) verwenden |
-
-Ausführliche Fehlerbehebung: **Kapitel 9** der Systemdokumentation.
-
----
-
-## Dokumentation
-
-```bash
-# PDF kompilieren (LaTeX erforderlich):
-pdflatex thaiger_dokumentation.tex
-pdflatex thaiger_dokumentation.tex   # zweimal für Inhaltsverzeichnis
-```
-
-Kapitel: Systemübersicht · Hardware-Setup · ESP-Protokoll · Android-App ·
-Bedienung · Einstellungen · MQTT & Engineer-Dashboard · Technische Referenz ·
-Fehlerbehebung · Protokoll-Anhang
-
----
-
-## Entwicklung
-
-### Neues ESP-Feld hinzufügen
-
-1. `TelemetryModel.java` — neues `float`-Feld + `mergeFrom()`
-2. `TelemetryParser.java` — neuer `case` in `applyField()`
-3. `TelemetryJsonEncoder.java` — neuer `appendF()`-Aufruf
-4. `DashboardActivity.java` — Feld auf View-ID mappen
-
-### Build-Varianten
-
-| Modus      | Aktivierung                          | Verhalten                      |
-|------------|--------------------------------------|--------------------------------|
-| Real BLE   | Geräteauswahl im Connecting-Screen   | HM-10 per GATT                |
-| Demo Mode  | „⚙ Demo Mode" im Connecting-Dialog  | Synthetischer Stream           |
-| MQTT Relay | In Einstellungen aktivieren          | Parallel zu BLE, eigener Thread|
-
----
-
-*FH Stralsund · Thaiger H2 Racing Team · v0.1*
+No GPS or mapping library is required — `android.location.LocationManager` is used directly.

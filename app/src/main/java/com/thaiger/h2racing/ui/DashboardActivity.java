@@ -10,6 +10,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -331,11 +332,21 @@ public class DashboardActivity extends AppCompatActivity {
 
     private void startGps() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) return;
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.w("Dashboard", "GPS skipped — location permission not granted");
+            return;
+        }
+        if (gpsService != null) {
+            gpsService.stop();
+        }
         gpsService = new GpsService(this);
-        gpsService.start(location -> {
+        boolean started = gpsService.start(location -> {
             if (relayService != null) relayService.onGps(location);
         });
+        if (!started) {
+            Log.w("Dashboard", "GPS failed to start — no location provider available");
+            gpsService = null;
+        }
     }
 
     private void tickTimer() {

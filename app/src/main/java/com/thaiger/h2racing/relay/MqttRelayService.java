@@ -68,11 +68,9 @@ public class MqttRelayService implements FrameRelay {
     /** Separate GPS queue — published to the /gps topic at 1 Hz. */
     private final BlockingQueue<String> gpsQueue = new ArrayBlockingQueue<>(10);
 
-    /** Throttle: minimum interval between enqueued frames. */
+    /** Throttle: minimum interval between enqueued telemetry frames. */
     private final long minIntervalMs;
-    private long lastEnqueuedAtMs  = 0;
-    private long lastGpsEnqueuedMs = 0;
-    private static final long GPS_MIN_INTERVAL_MS = 1_000;
+    private long lastEnqueuedAtMs = 0;
 
     private Thread relayThread;
 
@@ -134,12 +132,15 @@ public class MqttRelayService implements FrameRelay {
         }
     }
 
-    /** Called from UI thread (GPS callback). Enqueues a GPS fix for relay. */
+    /**
+     * Called from UI thread (GPS callback). Enqueues a GPS fix for relay.
+     *
+     * No relay-side throttle — the OS + GpsService control the delivery rate.
+     * Does NOT gate on CONNECTED; fixes buffer while MQTT reconnects and are
+     * published as soon as the link is restored.
+     */
     public void onGps(Location loc) {
-        if (!running || currentState != State.CONNECTED) return;
-        long now = System.currentTimeMillis();
-        if (now - lastGpsEnqueuedMs < GPS_MIN_INTERVAL_MS) return;
-        lastGpsEnqueuedMs = now;
+        if (!running) return;
         String json = encodeGps(loc);
         while (!gpsQueue.offer(json)) gpsQueue.poll();
     }
@@ -198,9 +199,9 @@ public class MqttRelayService implements FrameRelay {
                 setState(State.CONNECTED, host);
                 backoff = BACKOFF_INIT_MS;  // reset on success
 
-                // Publish loop
+                // Publish loop — 200 ms timeout so GPS is drained at ≥5 Hz
                 while (running && client.isConnected()) {
-                    String json = queue.poll(1, TimeUnit.SECONDS);
+                    String json = queue.poll(200, TimeUnit.MILLISECONDS);
                     if (json != null) {
                         MqttMessage msg = new MqttMessage(json.getBytes(StandardCharsets.UTF_8));
                         msg.setQos(0);

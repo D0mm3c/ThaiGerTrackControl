@@ -1,7 +1,9 @@
 package com.thaiger.h2racing.ui;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -9,16 +11,22 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 
 import com.thaiger.h2racing.App;
 import com.thaiger.h2racing.R;
 import com.thaiger.h2racing.bt.BluetoothService;
 import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
+import com.thaiger.h2racing.model.TelemetryModel;
 import com.thaiger.h2racing.relay.MqttRelayService;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -138,13 +146,77 @@ public class PostRunActivity extends AppCompatActivity {
             finish();
         });
 
+        RunStats stats = ((App) getApplication()).getRunStats();
+        CarProfile car = ((App) getApplication()).getCarProfile();
         View export = findViewById(R.id.tv_export_csv);
         if (export != null) {
-            export.setOnClickListener(v ->
-                    Toast.makeText(this,
-                            "CSV-Export folgt — Frame-Recording wird im nächsten Schritt ergänzt",
-                            Toast.LENGTH_SHORT).show());
+            export.setOnClickListener(v -> exportCsv(stats, car));
         }
+    }
+
+    private void exportCsv(RunStats stats, CarProfile car) {
+        if (stats == null || stats.frames.isEmpty()) {
+            Toast.makeText(this, "No data to export", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String ts = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(new Date(stats.startedAtMs));
+        String fileName = "thaiger_" + (car != null ? car.id : "run") + "_" + ts + ".csv";
+        File outFile = new File(getCacheDir(), fileName);
+
+        try (FileWriter fw = new FileWriter(outFile)) {
+            fw.write("time_s,speed_kmh,avg_speed_kmh,laps,target_lap_s," +
+                     "fc_voltage_v,supercap_voltage_v,motor_voltage_v," +
+                     "fc_current_a,supercap_current_a,motor_current_a,own_consumption_a," +
+                     "fc_temp_c,air_pump_pct,cell_volt_diff_mv," +
+                     "fc_energy_ws,motor_energy_ws,fc_efficiency_pct,sys_efficiency_pct," +
+                     "distance_km,motor_power_w\n");
+
+            List<TelemetryModel> frames = stats.frames;
+            for (TelemetryModel m : frames) {
+                fw.write(csvInt(m.totalTimeSec) + "," +
+                         csvFloat(m.speedKmh) + "," +
+                         csvFloat(m.avgSpeedKmh) + "," +
+                         csvInt(m.laps) + "," +
+                         csvInt(m.targetLapTimeSec) + "," +
+                         csvFloat(m.fcVoltageV) + "," +
+                         csvFloat(m.supercapVoltageV) + "," +
+                         csvFloat(m.motorVoltageV) + "," +
+                         csvFloat(m.fcCurrentA) + "," +
+                         csvFloat(m.supercapCurrentA) + "," +
+                         csvFloat(m.motorCurrentA) + "," +
+                         csvFloat(m.ownConsumptionA) + "," +
+                         csvFloat(m.fcTempC) + "," +
+                         csvFloat(m.airPumpDutyPct) + "," +
+                         csvFloat(m.cellVoltDiffMv) + "," +
+                         csvFloat(m.fcEnergyWs) + "," +
+                         csvFloat(m.motorEnergyWs) + "," +
+                         csvFloat(m.fcEfficiencyPct) + "," +
+                         csvFloat(m.sysEfficiencyPct) + "," +
+                         csvFloat(m.distanceKm) + "," +
+                         csvFloat(m.motorPowerW()) + "\n");
+            }
+        } catch (IOException e) {
+            Log.e("PostRun", "CSV write failed", e);
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Uri uri = FileProvider.getUriForFile(this,
+                getPackageName() + ".fileprovider", outFile);
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/csv");
+        share.putExtra(Intent.EXTRA_STREAM, uri);
+        share.putExtra(Intent.EXTRA_SUBJECT, "ThaiGer run export — " + fileName);
+        share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(share, "Share CSV"));
+    }
+
+    private static String csvFloat(float v) {
+        return Float.isNaN(v) ? "" : String.format(Locale.US, "%.4f", v);
+    }
+
+    private static String csvInt(int v) {
+        return v < 0 ? "" : String.valueOf(v);
     }
 
     /** Setzt Key + Value in einer <include>-Stat-Row. */

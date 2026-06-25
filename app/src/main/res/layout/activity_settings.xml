@@ -132,6 +132,52 @@
 
                 <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
 
+                <!-- Speed color -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Speed color warning"
+                            android:textColor="#E8EDF2"
+                            android:textSize="14sp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Speed turns red below minimum"
+                            android:textColor="#3D4F60"
+                            android:textSize="11sp"
+                            android:layout_marginTop="2dp"/>
+
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/sw_speed_color"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:thumbTint="#3D6FFF"
+                        android:trackTint="#1A3F6E"/>
+
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.5dp" android:background="#1E2530" android:layout_marginStart="12dp" android:layout_marginEnd="12dp"/>
+
                 <!-- Update rate -->
                 <LinearLayout
                     android:layout_width="match_parent"

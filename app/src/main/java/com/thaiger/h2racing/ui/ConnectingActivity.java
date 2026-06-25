@@ -82,7 +82,7 @@ public class ConnectingActivity extends AppCompatActivity {
         }
     }
 
-    /** Permission-Check: BT_CONNECT/SCAN auf 12+, LOCATION auf 9-11. */
+    /** Permission-Check: BT on 12+, LOCATION on all versions (BLE ≤11, GPS everywhere). */
     private boolean ensurePermissions() {
         List<String> needed = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -90,10 +90,10 @@ public class ConnectingActivity extends AppCompatActivity {
                     != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.BLUETOOTH_CONNECT);
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                     != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.BLUETOOTH_SCAN);
-        } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
+        // ACCESS_FINE_LOCATION needed on all API levels: BLE scanning (≤11) + GPS
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) needed.add(Manifest.permission.ACCESS_FINE_LOCATION);
         if (needed.isEmpty()) return true;
         ActivityCompat.requestPermissions(this, needed.toArray(new String[0]), REQ_BT_PERMISSIONS);
         return false;

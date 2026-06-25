@@ -190,7 +190,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="FUEL CELL STATE"
+                        android:text="SYS EFFICIENCY"
                         android:textColor="#3D4F60"
                         android:textSize="9sp"
                         android:letterSpacing="0.1"
@@ -310,7 +310,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="CURRENT"
+                        android:text="MOTOR CURRENT"
                         android:textColor="#3D4F60"
                         android:textSize="9sp"
                         android:letterSpacing="0.1"
@@ -416,6 +416,7 @@
                     android:textSize="11sp"/>
 
                 <TextView
+                    android:id="@+id/tv_min_speed_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="25 km/h"
@@ -424,6 +425,7 @@
                     android:fontFamily="sans-serif-medium"/>
 
                 <TextView
+                    android:id="@+id/tv_min_speed_status"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="  ✓ on target"
@@ -538,7 +540,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- H2 Pressure card -->
+            <!-- Cell Diff card -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -560,7 +562,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="4dp"
                         android:letterSpacing="0.1"
-                        android:text="Voltage Difference"
+                        android:text="CELL DIFF"
                         android:textColor="#3D4F60"
                         android:textSize="9sp" />
 
@@ -592,7 +594,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Motor Temp card — SECONDARY, smaller text -->
+            <!-- Target Lap card — SECONDARY, smaller text -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -611,7 +613,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Ideal Round Time"
+                        android:text="TARGET LAP"
                         android:textColor="#3D4F60"
                         android:textSize="9sp"
                         android:letterSpacing="0.1"
@@ -627,19 +629,10 @@
                             android:id="@+id/tv_ideal_time"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="58"
+                            android:text="—:—"
                             android:textColor="#7A8A99"
                             android:textSize="20sp"
                             android:fontFamily="sans-serif-medium"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="s"
-                            android:textColor="#3D4F60"
-                            android:textSize="12sp"
-                            android:layout_marginStart="2dp"
-                            android:layout_marginBottom="1dp"/>
 
                     </LinearLayout>
                 </LinearLayout>

@@ -32,6 +32,7 @@ public class SettingsActivity extends AppCompatActivity {
     private Switch swWakeLock;
     private Switch swVibrate;
     private Switch swAlertSound;
+    private Switch swSpeedColor;
     private TextView tvUpdateRate;
     private TextView tvThresholdThaiger;
     private TextView tvThresholdBengalo;
@@ -49,6 +50,7 @@ public class SettingsActivity extends AppCompatActivity {
         swWakeLock         = findViewById(R.id.sw_wake_lock);
         swVibrate          = findViewById(R.id.sw_vibrate);
         swAlertSound       = findViewById(R.id.sw_alert_sound);
+        swSpeedColor       = findViewById(R.id.sw_speed_color);
         tvUpdateRate       = findViewById(R.id.tv_update_rate_value);
         tvThresholdThaiger = findViewById(R.id.tv_fc_threshold_thaiger);
         tvThresholdBengalo = findViewById(R.id.tv_fc_threshold_bengalo);
@@ -63,6 +65,7 @@ public class SettingsActivity extends AppCompatActivity {
         swWakeLock.setChecked(prefs.isWakeLock());
         swVibrate.setChecked(prefs.isVibrate());
         swAlertSound.setChecked(prefs.isAlertSound());
+        swSpeedColor.setChecked(prefs.isSpeedColorEnabled());
         renderUpdateRate();
         renderThresholds();
         renderMqttSummary();
@@ -71,6 +74,7 @@ public class SettingsActivity extends AppCompatActivity {
         swWakeLock.setOnCheckedChangeListener((b, checked) -> prefs.setWakeLock(checked));
         swVibrate.setOnCheckedChangeListener((b, checked) -> prefs.setVibrate(checked));
         swAlertSound.setOnCheckedChangeListener((b, checked) -> prefs.setAlertSound(checked));
+        swSpeedColor.setOnCheckedChangeListener((b, checked) -> prefs.setSpeedColorEnabled(checked));
 
         // TextView-Klicks öffnen Dialoge
         tvUpdateRate.setOnClickListener(v -> showIntDialog(

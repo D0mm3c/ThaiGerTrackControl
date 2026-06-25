@@ -1,11 +1,16 @@
 package com.thaiger.h2racing.ui;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,10 +22,12 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 
 import com.thaiger.h2racing.App;
 import com.thaiger.h2racing.R;
 import com.thaiger.h2racing.bt.BluetoothService;
+import com.thaiger.h2racing.gps.GpsService;
 import com.thaiger.h2racing.model.CarProfile;
 import com.thaiger.h2racing.model.RunStats;
 import com.thaiger.h2racing.model.TelemetryModel;
@@ -60,6 +67,8 @@ public class DashboardActivity extends AppCompatActivity {
     /** Throttle: minimum delta zwischen UI-Refreshes. */
     private int   updateRateMs;
     private long  lastUiUpdateMs = 0;
+    /** Gate für Speed-Farb-Warning. */
+    private boolean speedColorEnabled = true;
 
     // ─── Hero ───
     private TextView tvSpeed;
@@ -77,6 +86,10 @@ public class DashboardActivity extends AppCompatActivity {
     private CardView cardFcTemp;
     private TextView tvVoltageDifference;    // nicht im Protokoll → "—"
     private TextView tvIdealTime;     // nicht im Protokoll → "—"
+
+    // ─── Min-speed indicator ───
+    private TextView tvMinSpeedValue;
+    private TextView tvMinSpeedStatus;
 
     // ─── Top-Bar / Bottom-Bar ───
     private TextView tvBtStatus;
@@ -97,6 +110,17 @@ public class DashboardActivity extends AppCompatActivity {
     private boolean fcTempStickyRed = false;
     private boolean alertDismissed  = false;
     private long    lastPacketAtMs  = 0;
+
+    // ─── 1-second run-time ticker ───
+    private final Handler    tickHandler  = new Handler(Looper.getMainLooper());
+    private final Runnable   tickRunnable = this::tickTimer;
+    /** Wall-clock ms at the moment we last synced from telemetry. */
+    private long timerSyncWallMs   = 0;
+    /** ESP totalTimeSec value at the last sync point. */
+    private int  timerSyncTotalSec = -1;
+
+    // ─── GPS ───
+    private GpsService gpsService;
 
     // ─── Lap tracking ───
     /** Zuletzt empfangener C-Wert. -1 = noch keine Runde gesehen. */
@@ -135,6 +159,7 @@ public class DashboardActivity extends AppCompatActivity {
         fcTempThresholdC    = prefs.getFcTempMaxC(car);
         cellDiffThresholdMv = prefs.getCellDiffMaxMv(car);
         updateRateMs        = prefs.getUpdateRateMs();
+        speedColorEnabled   = prefs.isSpeedColorEnabled();
         runStats         = ((App) getApplication()).getRunStats();
         if (runStats == null) {
             // Defensive: falls jemand direkt zum Dashboard navigiert hat
@@ -161,6 +186,8 @@ public class DashboardActivity extends AppCompatActivity {
         cardFcTemp        = findViewById(R.id.card_fc_temp);
         tvVoltageDifference = findViewById(R.id.tv_voltage_difference);
         tvIdealTime = findViewById(R.id.tv_ideal_time);
+        tvMinSpeedValue   = findViewById(R.id.tv_min_speed_value);
+        tvMinSpeedStatus  = findViewById(R.id.tv_min_speed_status);
         tvBtStatus        = findViewById(R.id.tv_bt_status);
         tvCarBadge        = findViewById(R.id.tv_car_badge);
         tvUpdateRate      = findViewById(R.id.tv_update_rate);
@@ -175,11 +202,11 @@ public class DashboardActivity extends AppCompatActivity {
 
     private void applyCarBadge() {
         tvCarBadge.setText(car.displayName.toUpperCase(Locale.ROOT));
-        // tv_h2_pressure-Slot zeigt jetzt CELL DIFF [mV], tv_motor_temp-Slot zeigt
-        // TARGET LAP [mm:ss]. Beide werden von applyTelemetry() befüllt.
-        // Bis dahin Layout-Defaults ("4.2" / "58") überschreiben, damit's nicht verwirrt.
         tvVoltageDifference.setText("—");
         tvIdealTime.setText("—:—");
+        if (tvMinSpeedValue != null) {
+            tvMinSpeedValue.setText(String.format(Locale.US, "%.0f km/h", car.minSpeedKmh));
+        }
     }
 
     private void attachListeners() {
@@ -287,6 +314,48 @@ public class DashboardActivity extends AppCompatActivity {
         if (relayService != null) {
             relayService.setStateListener((s, detail) -> applyRelayState(s));
         }
+        // Start 1-second run-time ticker
+        tickHandler.post(tickRunnable);
+        // Start GPS if permission granted
+        startGps();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        tickHandler.removeCallbacks(tickRunnable);
+        if (gpsService != null) {
+            gpsService.stop();
+            gpsService = null;
+        }
+    }
+
+    private void startGps() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.w("Dashboard", "GPS skipped — location permission not granted");
+            return;
+        }
+        if (gpsService != null) {
+            gpsService.stop();
+        }
+        gpsService = new GpsService(this);
+        boolean started = gpsService.start(location -> {
+            if (relayService != null) relayService.onGps(location);
+        });
+        if (!started) {
+            Log.w("Dashboard", "GPS failed to start — no location provider available");
+            gpsService = null;
+        }
+    }
+
+    private void tickTimer() {
+        if (timerSyncTotalSec >= 0) {
+            int elapsed = (int) ((System.currentTimeMillis() - timerSyncWallMs) / 1000);
+            int sec = timerSyncTotalSec + elapsed;
+            tvRunTime.setText(String.format(Locale.US, "%02d:%02d", sec / 60, sec % 60));
+        }
+        tickHandler.postDelayed(tickRunnable, 1000);
     }
 
     /** Letzter bekannter BT-Status — für kombinierte Top-Bar-Anzeige. */
@@ -352,7 +421,16 @@ public class DashboardActivity extends AppCompatActivity {
     private void applyTelemetry(TelemetryModel m) {
         long now = System.currentTimeMillis();
         // Stats akkumulieren auf JEDES Frame, auch wenn UI gedrosselt → kein Datenverlust
-        if (runStats != null) runStats.update(m, fcTempThresholdC);
+        if (runStats != null) {
+            runStats.update(m, fcTempThresholdC);
+            runStats.addFrame(m);
+        }
+
+        // Sync run-time clock on every frame so the 1-second ticker stays accurate
+        if (m.totalTimeSec >= 0) {
+            timerSyncTotalSec = m.totalTimeSec;
+            timerSyncWallMs   = now;
+        }
 
         // Throttle: zu schnelle Frames droppen, um UI-Last und Stromverbrauch zu senken.
         if (now - lastUiUpdateMs < updateRateMs) return;
@@ -363,11 +441,18 @@ public class DashboardActivity extends AppCompatActivity {
         // ─── Hero: Speed ───
         if (!Float.isNaN(m.speedKmh)) {
             tvSpeed.setText(String.format(Locale.US, "%.0f", m.speedKmh));
-            // Min-Speed-Warnung
-            if (m.speedKmh < car.minSpeedKmh) {
-                tvSpeed.setTextColor(Color.parseColor("#FF3B3B"));
+            boolean onTarget = m.speedKmh >= car.minSpeedKmh;
+            if (speedColorEnabled) {
+                tvSpeed.setTextColor(onTarget ? 0xFFE8EDF2 : 0xFFFF3B3B);
             } else {
-                tvSpeed.setTextColor(Color.parseColor("#E8EDF2"));
+                tvSpeed.setTextColor(0xFFE8EDF2);
+            }
+            if (tvMinSpeedStatus != null) {
+                tvMinSpeedStatus.setText(onTarget ? "  ✓ on target" : "  ✗ too slow");
+                tvMinSpeedStatus.setTextColor(onTarget ? 0xFF00D97E : 0xFFFF3B3B);
+                if (tvMinSpeedValue != null) {
+                    tvMinSpeedValue.setTextColor(onTarget ? 0xFF00D97E : 0xFFFF3B3B);
+                }
             }
         }
 
@@ -416,12 +501,6 @@ public class DashboardActivity extends AppCompatActivity {
                 // Wert ist nachhaltig unter Threshold gefallen → wieder armed
                 alertDismissed = false;
             }
-        }
-
-        // ─── Top-Bar / Bottom-Bar ───
-        if (m.totalTimeSec >= 0) {
-            int mn = m.totalTimeSec / 60, sc = m.totalTimeSec % 60;
-            tvRunTime.setText(String.format(Locale.US, "%02d:%02d", mn, sc));
         }
 
         // ─── Lap-Detection: C ändert sich → Runde abgeschlossen ───

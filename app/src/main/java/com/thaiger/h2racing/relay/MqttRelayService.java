@@ -1,6 +1,7 @@
 package com.thaiger.h2racing.relay;
 
 import android.content.Context;
+import android.location.Location;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -16,6 +17,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -63,7 +65,10 @@ public class MqttRelayService implements FrameRelay {
     /** Bounded queue — drop-oldest when full (burst protection). */
     private final BlockingQueue<String> queue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 
-    /** Throttle: minimum interval between enqueued frames. */
+    /** Separate GPS queue — published to the /gps topic at 1 Hz. */
+    private final BlockingQueue<String> gpsQueue = new ArrayBlockingQueue<>(10);
+
+    /** Throttle: minimum interval between enqueued telemetry frames. */
     private final long minIntervalMs;
     private long lastEnqueuedAtMs = 0;
 
@@ -127,6 +132,37 @@ public class MqttRelayService implements FrameRelay {
         }
     }
 
+    /**
+     * Called from UI thread (GPS callback). Enqueues a GPS fix for relay.
+     *
+     * No relay-side throttle — the OS + GpsService control the delivery rate.
+     * Does NOT gate on CONNECTED; fixes buffer while MQTT reconnects and are
+     * published as soon as the link is restored.
+     */
+    public void onGps(Location loc) {
+        if (!running) return;
+        String json = encodeGps(loc);
+        while (!gpsQueue.offer(json)) gpsQueue.poll();
+    }
+
+    private static String encodeGps(Location loc) {
+        StringBuilder sb = new StringBuilder(128);
+        sb.append("{\"ts\":").append(loc.getTime());
+        sb.append(",\"lat\":").append(String.format(Locale.US, "%.6f", loc.getLatitude()));
+        sb.append(",\"lon\":").append(String.format(Locale.US, "%.6f", loc.getLongitude()));
+        if (loc.hasAltitude())
+            sb.append(",\"alt\":").append(String.format(Locale.US, "%.1f", loc.getAltitude()));
+        if (loc.hasSpeed())
+            // m/s → km/h
+            sb.append(",\"spd\":").append(String.format(Locale.US, "%.1f", loc.getSpeed() * 3.6f));
+        if (loc.hasAccuracy())
+            sb.append(",\"acc\":").append(String.format(Locale.US, "%.1f", loc.getAccuracy()));
+        if (loc.hasBearing())
+            sb.append(",\"hdg\":").append(String.format(Locale.US, "%.1f", loc.getBearing()));
+        sb.append('}');
+        return sb.toString();
+    }
+
     // ─── Relay thread ───
 
     private void runLoop() {
@@ -136,6 +172,7 @@ public class MqttRelayService implements FrameRelay {
         String user     = prefs.getMqttUsername();
         String pass     = prefs.getMqttPassword();
         String topic    = "thaiger/" + car.id + "/telemetry";
+        String gpsTopic = "thaiger/" + car.id + "/gps";
         // Unique client ID — allows two phones to publish simultaneously
         String clientId = "thaiger-" + car.id + "-" + UUID.randomUUID().toString().substring(0, 8);
         String brokerUri = (useTls ? "ssl://" : "tcp://") + host + ":" + port;
@@ -162,14 +199,23 @@ public class MqttRelayService implements FrameRelay {
                 setState(State.CONNECTED, host);
                 backoff = BACKOFF_INIT_MS;  // reset on success
 
-                // Publish loop
+                // Publish loop — 200 ms timeout so GPS is drained at ≥5 Hz
                 while (running && client.isConnected()) {
-                    String json = queue.poll(1, TimeUnit.SECONDS);
-                    if (json == null) continue;  // timeout, loop
-                    MqttMessage msg = new MqttMessage(json.getBytes(StandardCharsets.UTF_8));
-                    msg.setQos(0);        // fire-and-forget — race telemetry tolerates loss
-                    msg.setRetained(false);
-                    client.publish(topic, msg);
+                    String json = queue.poll(200, TimeUnit.MILLISECONDS);
+                    if (json != null) {
+                        MqttMessage msg = new MqttMessage(json.getBytes(StandardCharsets.UTF_8));
+                        msg.setQos(0);
+                        msg.setRetained(false);
+                        client.publish(topic, msg);
+                    }
+                    // Drain GPS queue on every iteration (1 Hz max)
+                    String gpsJson = gpsQueue.poll();
+                    if (gpsJson != null) {
+                        MqttMessage gpsMsg = new MqttMessage(gpsJson.getBytes(StandardCharsets.UTF_8));
+                        gpsMsg.setQos(0);
+                        gpsMsg.setRetained(false);
+                        client.publish(gpsTopic, gpsMsg);
+                    }
                 }
 
             } catch (InterruptedException e) {

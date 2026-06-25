@@ -7,13 +7,13 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.PowerManager;
 import android.text.SpannableString;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -56,7 +56,6 @@ public class DashboardActivity extends AppCompatActivity {
     private CarProfile car;
     private BluetoothService service;
     private MqttRelayService relayService;
-    private PowerManager.WakeLock wakeLock;
     private Prefs    prefs;
     private AlertFx  alertFx;
     private RunStats runStats;
@@ -168,8 +167,10 @@ public class DashboardActivity extends AppCompatActivity {
         }
         relayService = ((App) getApplication()).getRelayService();
 
+        // "Keep screen on" gated on the Settings toggle. FLAG_KEEP_SCREEN_ON only
+        // holds while this window is visible — no manual release, no WakeLock.
         if (prefs.isWakeLock()) {
-            acquireWakeLock();
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
         // Der Listener wird in onResume gesetzt, damit er bei Activity-Pause sauber stoppt.
     }
@@ -237,7 +238,7 @@ public class DashboardActivity extends AppCompatActivity {
     private void addLapOverlay() {
         ViewGroup root = findViewById(android.R.id.content);
         if (root == null) return;
-        int dp = (int) getResources().getDisplayMetrics().density;
+        float density = getResources().getDisplayMetrics().density;
         float textSize = 16f;
 
         LinearLayout container = new LinearLayout(this);
@@ -248,13 +249,13 @@ public class DashboardActivity extends AppCompatActivity {
         tvLapPrev.setText("PREV  —:—");
         container.addView(tvLapPrev);
 
-        container.addView(makeSeparatorDot(dp));
+        container.addView(makeSeparatorDot(density));
 
         tvLapHeader = mkLapText(0xFFE8EDF2, textSize, false);
         tvLapHeader.setText("LAP —");
         container.addView(tvLapHeader);
 
-        container.addView(makeSeparatorDot(dp));
+        container.addView(makeSeparatorDot(density));
 
         tvLapCurr = mkLapText(0xFFE8EDF2, textSize, true);
         tvLapCurr.setText("CURR  —:—");
@@ -264,7 +265,7 @@ public class DashboardActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        lp.bottomMargin = 64 * dp;   // klar über der Bottom-Bar, unter dem η-Badge
+        lp.bottomMargin = (int) (64 * density);   // klar über der Bottom-Bar, unter dem η-Badge
         root.addView(container, lp);
     }
 
@@ -279,7 +280,7 @@ public class DashboardActivity extends AppCompatActivity {
         return tv;
     }
 
-    private View makeSeparatorDot(int dp) {
+    private View makeSeparatorDot(float density) {
         TextView dot = new TextView(this);
         dot.setText("·");
         dot.setTextColor(0xFF3D4F60);
@@ -287,18 +288,10 @@ public class DashboardActivity extends AppCompatActivity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(14 * dp, 0, 14 * dp, 0);
+        int m = (int) (14 * density);
+        lp.setMargins(m, 0, m, 0);
         dot.setLayoutParams(lp);
         return dot;
-    }
-
-    private void acquireWakeLock() {
-        try {
-            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-            wakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE,
-                    "Thaiger:Dashboard");
-            wakeLock.acquire(60 * 60 * 1000L);  // 1h max — auto-released bei stop()
-        } catch (Throwable ignored) {}
     }
 
     // ─────────────────────── BT-Events ───────────────────────
@@ -323,6 +316,10 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        // Detach UI callbacks while paused — re-attached in onResume. The services
+        // keep running; we just stop updating views that are no longer visible.
+        if (service != null) service.setListener(null);
+        if (relayService != null) relayService.setStateListener(null);
         tickHandler.removeCallbacks(tickRunnable);
         if (gpsService != null) {
             gpsService.stop();
@@ -597,9 +594,6 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (wakeLock != null && wakeLock.isHeld()) {
-            try { wakeLock.release(); } catch (Throwable ignored) {}
-        }
         if (alertFx != null) alertFx.release();
     }
 

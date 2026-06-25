@@ -2,6 +2,8 @@
 
 Android cockpit display for the ThaiGer H2 hydrogen fuel cell racing vehicle. The app receives live telemetry from the car over Bluetooth Low Energy, displays it on a race dashboard, and relays it via MQTT to an engineer's laptop.
 
+📖 **User guidebook:** [English](docs/GUIDEBOOK.en.md) · [Deutsch](docs/GUIDEBOOK.de.md) · [中文](docs/GUIDEBOOK.zh.md) — full step-by-step usage of the app and the engineer dashboard.
+
 ---
 
 ## Features

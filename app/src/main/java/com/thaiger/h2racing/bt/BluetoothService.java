@@ -303,11 +303,14 @@ public class BluetoothService {
                 applyFrame(parsed);
             }
 
-            // Akkumulator kürzen: alles bis inkl. letztem '*' verarbeitet;
-            // dahinter könnte ein unvollständiges Feld stehen → behalten.
+            // Akkumulator kürzen: alle vollständigen Felder sind verarbeitet.
+            // Das letzte '*' kann der Anfang eines noch unvollständigen Feldes an
+            // der Chunk-Grenze sein — daher ab dem letzten '*' (INKLUSIVE) behalten,
+            // damit das Feld mit dem nächsten Chunk komplettiert und geparsed wird.
+            // (Vorher wurde das öffnende '*' mit abgeschnitten → das Feld ging verloren.)
             int lastStar = accumulator.lastIndexOf("*");
             if (lastStar >= 0) {
-                accumulator.delete(0, lastStar + 1);
+                accumulator.delete(0, lastStar);
             }
             if (accumulator.length() > 4096) accumulator.setLength(0);
         }

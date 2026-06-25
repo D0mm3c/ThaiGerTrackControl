@@ -56,11 +56,12 @@
             android:screenOrientation="portrait"/>
 
         <!-- Screen 3: Dashboard -->
+        <!-- "Keep screen on" is controlled at runtime from Settings via the
+             FLAG_KEEP_SCREEN_ON window flag, not hard-wired here. -->
         <activity
             android:name=".ui.DashboardActivity"
             android:exported="false"
-            android:screenOrientation="landscape"
-            android:keepScreenOn="true"/>
+            android:screenOrientation="landscape"/>
 
         <!-- Screen 4: Alert Overlay -->
         <activity

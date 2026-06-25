@@ -32,9 +32,9 @@ public class RunStats {
     /** Power-Verlauf, sample-pro-Update. Wird im PostRun zum Graph runtergesampelt. */
     public final List<Float> powerSamples = new ArrayList<>(1024);
 
-    /** Raw frames for CSV export — capped to avoid OOM on very long runs. */
-    public static final int MAX_FRAMES = 10_000;
-    public final List<TelemetryModel> frames = new ArrayList<>(1024);
+    /** Raw frames for CSV export — one per telemetry frame, the whole run is kept
+     *  so the export is complete (grows with run length, like {@link #powerSamples}). */
+    public final List<TelemetryModel> frames = new ArrayList<>(4096);
 
     /**
      * @param fcTempThresholdC Schwelle für Alert-Edge-Detection (aus Prefs).
@@ -63,7 +63,7 @@ public class RunStats {
 
     /** Records a raw frame for CSV export. Call on every telemetry frame. */
     public void addFrame(TelemetryModel m) {
-        if (frames.size() < MAX_FRAMES) frames.add(m);
+        frames.add(m);
     }
 
     public float avgSpeedKmh() {

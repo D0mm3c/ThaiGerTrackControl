@@ -1,0 +1,2710 @@
+% =====================================================================
+%  ThaiGer Track Control - Printable Trilingual Guidebook
+%  -------------------------------------------------------------------
+%  ENGINE: XeLaTeX  (required for Chinese / CJK and system fonts)
+%
+%  Build:
+%      xelatex guidebook.tex
+%      xelatex guidebook.tex        (run twice for the table of contents)
+%  or:
+%      latexmk -xelatex guidebook.tex
+%
+%  FONTS: The Chinese part uses Windows fonts (SimSun / Microsoft YaHei).
+%  On Linux/macOS replace them with Noto (see the \setCJK... lines below).
+% =====================================================================
+\documentclass[11pt,a4paper,oneside]{report}
+
+% --- Fonts & engine ---
+\usepackage{fontspec}
+% Main text font must cover Latin + Cyrillic (for the Russian part AND its TOC /
+% bookmark entries, which are typeset outside the Russian language switch).
+% Times New Roman ships with Windows; on Linux/macOS use "TeX Gyre Termes" or
+% "Noto Serif" (both bundled with TeX / widely available and Cyrillic-capable).
+\setmainfont{Times New Roman}
+\usepackage{xeCJK}               % Chinese support (load before babel-driven text use)
+
+% Windows 11 CJK fonts. Linux/macOS alternative shown in comments:
+%   \setCJKmainfont{Noto Serif CJK SC}
+%   \setCJKsansfont{Noto Sans CJK SC}
+%   \setCJKmonofont{Noto Sans Mono CJK SC}
+\setCJKmainfont{SimSun}
+\setCJKsansfont{Microsoft YaHei}
+\setCJKmonofont{Microsoft YaHei}
+
+% --- Languages (hyphenation) ---
+% shorthands=off so babel never makes ", :, <, >, ~ active - they appear in
+% code tokens / URLs and must stay literal.
+\usepackage[main=english,ngerman,french,spanish,russian,shorthands=off]{babel}
+
+% --- Layout ---
+\usepackage[a4paper,margin=2.4cm,headheight=15pt]{geometry}
+\usepackage{parskip}
+\usepackage{textcomp}
+\usepackage{pifont}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{bookmark}            % cleaner PDF bookmarks (part -> section jump)
+
+% Let TeX absorb small over-runs instead of pushing into the margin
+\setlength{\emergencystretch}{3.5em}
+
+% --- Brand colours (print-friendly) ---
+\definecolor{brandblue}{HTML}{2B5CE6}
+\definecolor{ink}{HTML}{1A1F26}
+\definecolor{tgreen}{HTML}{0F9D58}
+\definecolor{tamber}{HTML}{C97A00}
+\definecolor{tred}{HTML}{D7263D}
+\definecolor{codebg}{HTML}{F4F6F9}
+\definecolor{codeframe}{HTML}{E1E7EF}
+
+\hypersetup{
+  colorlinks=true, linkcolor=brandblue, urlcolor=brandblue, citecolor=brandblue,
+  pdftitle={ThaiGer Track Control - Guidebook},
+  pdfauthor={ThaiGer Racing},
+  pdfsubject={Telemetry cockpit user guide},
+}
+
+% --- Section numbering: per-part 1..N (no chapter prefix) ---
+\renewcommand{\thesection}{\arabic{section}}
+\titleformat{\section}{\Large\bfseries\color{brandblue}}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries\color{ink}}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{ink}}{}{0em}{}
+\titlespacing*{\section}{0pt}{14pt}{6pt}
+
+% --- Header / footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{ink}{ThaiGer Track Control}}
+\fancyhead[R]{\small\textcolor{ink}{User Guidebook}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% --- Lists ---
+\setlist{itemsep=2pt,topsep=3pt,parsep=0pt,leftmargin=1.5em}
+
+% --- Code listings ---
+\lstdefinestyle{tg}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{codeframe},
+  framesep=6pt,
+  xleftmargin=8pt, xrightmargin=8pt,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  aboveskip=8pt, belowskip=8pt,
+}
+\lstset{style=tg}
+
+% --- Callout box ---
+\newtcolorbox{tgnote}{colback=blue!4,colframe=brandblue,boxrule=0.5pt,arc=2pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt}
+
+% --- Wrapping table column ---
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+% --- Symbol helpers (avoid bare Unicode in Latin text) ---
+\newcommand{\arrow}{\,$\rightarrow$\,}
+\newcommand{\degC}{\textdegree C}
+\newcommand{\Htwo}{H\textsubscript{2}}
+\newcommand{\midsep}{\,\textperiodcentered\,}
+\newcommand{\ok}{\textcolor{tgreen}{\ding{51}}}
+\newcommand{\nope}{\textcolor{tred}{\ding{55}}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% Part heading helper
+\newcommand{\guidepart}[1]{%
+  \clearpage
+  \part*{#1}%
+  \addcontentsline{toc}{part}{#1}%
+  \setcounter{section}{0}%
+}
+
+\begin{document}
+
+% =====================================================================
+%  TITLE PAGE
+% =====================================================================
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+{\Huge\bfseries\color{brandblue} ThaiGer \Htwo{} Track Control\par}
+\vspace{0.6cm}
+{\LARGE User Guidebook\par}
+\vspace{0.3cm}
+{\large Telemetry cockpit for hydrogen fuel-cell racing\par}
+\vspace{1.4cm}
+{\large Thaiger 7 \midsep{} Bengalo\par}
+\vspace{2.2cm}
+\begin{tcolorbox}[width=0.7\linewidth,colback=codebg,colframe=codeframe,
+  boxrule=0.5pt,arc=3pt,halign=center]
+\large
+English \midsep{} Deutsch \midsep{} Français\\
+Español \midsep{} Русский \midsep{} 中文 (简体)
+\end{tcolorbox}
+\vfill
+{\small Android cockpit app \,+\, browser-based engineer dashboard\par}
+{\small Document generated for print \midsep{} A4\par}
+\end{titlepage}
+
+% =====================================================================
+%  TABLE OF CONTENTS
+% =====================================================================
+\clearpage
+\tableofcontents
+\clearpage
+
+
+% #####################################################################
+%  PART I - ENGLISH
+% #####################################################################
+\selectlanguage{english}
+\guidepart{English Guide}
+
+\section{What this project is}
+ThaiGer Track Control is a two-part telemetry system for a hydrogen fuel-cell
+race car:
+\begin{itemize}
+  \item An \textbf{Android app} that runs on a phone \emph{inside the car}. It
+    receives live telemetry from the car's controller over \textbf{Bluetooth Low
+    Energy (BLE)}, shows it on a race dashboard for the driver, records the run,
+    and \textbf{relays} the data over the internet via \textbf{MQTT}.
+  \item An \textbf{Engineer Dashboard} --- a single HTML file
+    (\code{engineer\_dashboard.html}) --- that runs in a browser on the
+    \emph{engineer's laptop} in the pit. It subscribes to the same MQTT stream and
+    shows operations data, a live map with a power-colored GPS trail, and
+    analytics charts.
+\end{itemize}
+The two halves never talk directly; they meet at the \textbf{MQTT broker} in the
+cloud.
+
+\section{System overview}
+
+\begin{lstlisting}
+   +------------+   BLE    +------------------+   MQTT/TLS   +----------------+
+   | Car        | -------> | Android app      | -----------> | MQTT broker    |
+   | controller | *A28.3*  | (phone in car)   | JSON frames  | (HiveMQ Cloud) |
+   +------------+          +------------------+              +-------+--------+
+                                  |                                  | WebSocket/TLS
+                                  | GPS (phone LocationManager)      v
+                                  v                          +----------------+
+                          thaiger/{car}/gps                  | Engineer       |
+                          thaiger/{car}/telemetry            | Dashboard HTML |
+                                                             +----------------+
+\end{lstlisting}
+\begin{itemize}
+  \item Two MQTT topics per car: \code{thaiger/\{car\}/telemetry} and
+    \code{thaiger/\{car\}/gps}.
+  \item \code{\{car\}} is the vehicle id: \code{thaiger7} or \code{bengalo}.
+  \item The phone publishes; the engineer dashboard subscribes. Any number of
+    laptops can watch the same car at once.
+\end{itemize}
+
+\section{The Android app}
+
+\subsection{Installation \& first start}
+The app is a standard Android project (Gradle). To build a debug APK:
+
+\begin{lstlisting}
+./gradlew assembleDebug
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Item} & \textbf{Value}\\
+\midrule
+Minimum Android & 9.0 (API 28)\\
+Target Android  & 14 (API 34)\\
+Language        & Java 11\\
+App id          & \code{com.thaiger.h2racing}\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Install the APK on the phone that lives in the car. On first launch the app opens
+on the \textbf{Car Select} screen.
+
+\begin{tgnote}
+\textbf{Tip.} Mount the phone in landscape where the driver can see it. The
+dashboard keeps the screen awake during a run (Settings \arrow{} \emph{Keep screen
+on}).
+\end{tgnote}
+
+\subsection{Permissions}
+The app asks for permissions on the \textbf{Connecting} screen, before any
+hardware is used. Grant all of them for full functionality.
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Permission} & \textbf{Why it is needed}\\
+\midrule
+Bluetooth Connect / Scan (Android 12+) & Pair \& talk to the car's BLE module\\
+Bluetooth / Bluetooth Admin (Android $\le$ 11) & Same, on older Android\\
+Location (fine) & Required by Android for BLE scanning \emph{and} for GPS\\
+Location (coarse) & GPS fallback\\
+Internet & MQTT relay to the engineer laptop\\
+Wake Lock & Keep the screen on during a run\\
+Vibrate & Haptic feedback for alerts\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+If you deny Bluetooth, you can still use \textbf{Demo Mode} (synthetic data) to
+explore the app.
+
+\subsection{Screen 1 --- Car Select}
+\begin{itemize}
+  \item Two cards: \textbf{Thaiger 7} and \textbf{Bengalo}. Tap a card to select
+    it (a blue outline marks the selection). Thaiger 7 is the default.
+  \item The selected profile controls warning thresholds and the max-power scale.
+  \item Tap \textbf{Settings} (top) to open app settings before a run.
+  \item Tap \textbf{Connect to \ldots} to continue to the Connecting screen.
+\end{itemize}
+
+\subsection{Screen 2 --- Connecting (Bluetooth / Demo Mode)}
+This screen pairs the phone with the car and starts the data stream.
+\begin{enumerate}
+  \item The app checks permissions and that Bluetooth is on.
+  \item A dialog lists your \textbf{paired Bluetooth devices} plus a final
+    \textbf{Demo Mode} entry.
+  \item Choose your car's module (e.g. an HM-10 / HC-05 / ESP32-named device),
+    \textbf{or} pick \textbf{Demo Mode} to run with a synthetic data stream and no
+    hardware.
+  \item \textbf{Pair New} opens the Android Bluetooth settings if your module is
+    not paired yet. \textbf{Cancel} returns to Car Select.
+\end{enumerate}
+When the module reports \textbf{Connected}, the app automatically advances to the
+Live Dashboard. If the MQTT relay is enabled in Settings, it starts here too, so
+the engineer laptop begins receiving data as soon as the run starts.
+
+\begin{tgnote}
+Connection drops are handled automatically with exponential backoff
+(1 \arrow{} 2 \arrow{} 4 \arrow{} 8 \arrow{} 16 s). You will see \emph{Reconnecting\ldots}
+--- no action needed.
+\end{tgnote}
+
+\subsection{Screen 3 --- Live Dashboard}
+The dashboard is the driver's main view (landscape, screen stays awake). It shows
+the latest value of every telemetry field, refreshed continuously.
+\begin{itemize}
+  \item \textbf{Speed} --- the large hero number (km/h). If \emph{Speed color
+    warning} is on, the number turns \textbf{red} when you drop below the car's
+    minimum target speed and stays light otherwise. A small indicator shows
+    \ok{} on target / \nope{} too slow.
+  \item \textbf{Lap overlay} (single line above the bottom bar):
+    \code{PREV 1:18} \midsep{} \code{LAP 3} \midsep{} \code{CURR 0:09} --- previous
+    lap time, current lap number, and the running current-lap time.
+  \item \textbf{Electrical block} --- fuel-cell / supercap / motor voltage and
+    current, own consumption, cell voltage difference.
+  \item \textbf{Thermal \& efficiency} --- FC temperature, air-pump duty, FC and
+    system efficiency, energies, optimal speed, driving hint.
+  \item \textbf{Alert banner} --- appears when a threshold is crossed (e.g. FC
+    temperature or cell voltage difference too high). With \emph{Vibrate} /
+    \emph{Alert sound} on you also get haptic / audio feedback. Tap
+    \textbf{Dismiss} to hide the banner.
+\end{itemize}
+\begin{tgnote}
+\textbf{Ending a run:} \textbf{long-press the speed number.} This stops Bluetooth
+and the MQTT relay, finalizes the run statistics, and opens the \textbf{Post-Run
+Summary}.
+\end{tgnote}
+
+\subsection{Screen 4 --- Post-Run Summary \& CSV export}
+After a run you see aggregated results: run duration, distance, average speed,
+energy used, peak motor power, max FC temperature, and alert count, plus a
+\textbf{power graph} for the whole run.
+\begin{itemize}
+  \item \textbf{Export CSV} --- writes every recorded telemetry frame to a CSV
+    file and opens the Android share sheet (email, Drive, messenger, \ldots). The
+    file is named \code{thaiger\_\{car\}\_\allowbreak\{YYYYMMDD\_HHMM\}.csv} and contains 21
+    columns. If no data was recorded you get a \emph{``No data to export''}
+    message.
+  \item \textbf{New Run} --- go straight back to Connecting for another run.
+  \item \textbf{Back to Car Select} --- return to the start.
+\end{itemize}
+
+\subsection{Screen 5 --- Settings}
+Reached from the \textbf{Settings} link on Car Select. All values are saved
+immediately.
+
+\subsubsection{Display}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Setting} & \textbf{Default} & \textbf{Meaning}\\
+\midrule
+Keep screen on & On & Hold a wake lock so the screen never sleeps during a run\\
+Speed color warning & On & Turn the speed red when below the car's minimum target speed\\
+Update rate & 50 ms & How often the dashboard UI redraws (20--500 ms)\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Alerts}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Setting} & \textbf{Default} & \textbf{Meaning}\\
+\midrule
+Vibrate & On & Haptic pulse when an alert fires\\
+Alert sound & Off & Play a tone when an alert fires\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Thresholds (per vehicle)}
+Stored separately for Thaiger 7 and Bengalo:
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Setting} & \textbf{Range} & \textbf{Default (Thaiger 7 / Bengalo)}\\
+\midrule
+FC temperature max & 30--120 \degC{} & 70 \degC{} / 65 \degC{}\\
+Cell voltage diff max & 10--500 mV & 50 mV / 50 mV\\
+\bottomrule
+\end{tabularx}
+
+\subsection{Screen 6 --- MQTT Settings}
+A sub-screen of Settings that configures the relay to the engineer laptop. The
+relay only runs if it is enabled \emph{before} you start a run.
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Field} & \textbf{Default} & \textbf{Notes}\\
+\midrule
+Enable relay & Off & Master switch --- turn on to publish telemetry\\
+Use TLS & On & Encrypted connection (required by HiveMQ Cloud)\\
+Broker host & --- & e.g. \code{abc123.s1.eu.hivemq.cloud}\\
+Port & 8883 & TLS MQTT port (8883 typical; 1883 plain)\\
+Username & --- & Broker username\\
+Password & --- & Broker password (shown masked)\\
+Publish rate & 5 Hz & Telemetry publish rate, 1--10 Hz\\
+\bottomrule
+\end{tabularx}
+\begin{tgnote}
+The phone publishes over \textbf{native MQTT (TLS)}. The engineer dashboard
+connects to the \emph{same} broker over \textbf{MQTT-over-WebSocket} --- so the
+broker must also expose a WebSocket listener (HiveMQ Cloud does, on port 8884).
+\end{tgnote}
+
+\section{The Engineer Dashboard}
+\code{engineer\_dashboard.html} is a single self-contained file. It needs no build
+step and no server --- just a modern browser and internet access (for the map
+tiles, fonts, and the MQTT/charts libraries from CDN).
+
+\subsection{Opening \& connecting}
+\begin{enumerate}
+  \item Open \code{engineer\_dashboard.html} in Chrome/Edge/Firefox.
+  \item The \textbf{Connection Settings} dialog opens automatically on first use
+    (or click the gear button, top-right).
+  \item Fill in: \textbf{Car} (\code{Thaiger 7} or \code{Bengalo}, must match the
+    car the phone publishes as); \textbf{Broker URL (WebSocket)}, e.g.
+    \code{wss://abc123.s1.eu.hivemq.cloud:\allowbreak8884/mqtt} (use \code{wss://} for TLS, or
+    \code{ws://host:port} for a plain local broker); \textbf{Username} /
+    \textbf{Password}.
+  \item Click \textbf{Connect}. Settings are saved in the browser
+    (\code{localStorage}) and reconnect automatically next time.
+\end{enumerate}
+The status dot (top-right) shows the link: grey disconnected, amber connecting,
+green connected. Three tabs switch between \textbf{Operations},
+\textbf{Live Tracking}, and \textbf{Analytics}.
+
+\subsection{View 1 --- Operations}
+A single-glance overview: a \textbf{hero speed card} (blue at/above optimal speed,
+red below) with average speed, lap count, run time, target lap and distance; an
+\textbf{Electrical} grid; a \textbf{Thermal \& Efficiency} grid; and a pulsing
+\textbf{LIVE} pill confirming fresh data.
+
+\subsection{View 2 --- Live Tracking \& map}
+A full-screen dark \textbf{OpenStreetMap} (Leaflet) following the car.
+\begin{itemize}
+  \item \textbf{Power-colored trail} --- the path is drawn segment by segment and
+    colored by the motor power at that moment: \textcolor{tgreen}{green (0 W)}
+    \arrow{} \textcolor{tamber}{amber (100 W)} \arrow{} \textcolor{tred}{red
+    (200 W+)}. The newest part is fully opaque and fades with age, so you read both
+    \emph{where} the car went and \emph{how hard it was working}. (200 W is the
+    ThaiGer max tracking power; the constant \code{POWER\_MAX} can be changed.)
+  \item \textbf{Power legend} (bottom-left) --- the color scale plus a live watt
+    readout.
+  \item \textbf{Rotating car marker} points in the direction of travel.
+  \item \textbf{GPS status panel} (right) --- fix quality, accuracy, latitude,
+    longitude, altitude, GPS speed, heading, live motor power, lap count, and a
+    \textbf{Filtered} counter (rejected noisy fixes --- see below).
+\end{itemize}
+
+\subsubsection{GPS jitter cleanup}
+Raw GPS can jump around. Each fix is cleaned before it touches the map by four
+steps: (1) drop fixes with accuracy worse than 75 m; (2) reject ``teleports'' ---
+fixes implying an impossible speed (over approx.\ 162 km/h), with a re-sync guard
+so it never gets stuck; (3) ignore sub-1.5 m wobble while stationary; (4) light
+smoothing of the remaining noise. The result is a clean trail with no random
+jumps.
+
+\subsubsection{Per-lap snapshot + reset}
+Every time the car's lap counter increments, the dashboard automatically renders
+the just-finished lap's trail to a PNG image and downloads it
+(\code{thaiger-lapN-<timestamp>.png}), then clears the trail so the new lap is
+drawn fresh. A green toast confirms each save.
+
+\subsection{View 3 --- Analytics}
+A \textbf{live telemetry table} listing all 22 fields with their current values,
+plus a \textbf{Speed} chart (km/h over time) and an \textbf{Efficiency} chart (FC
+and system efficiency over time), each showing the last 60 samples.
+
+\section{Telemetry protocol \& field reference}
+The car controller sends ASCII frames over BLE. Each field is wrapped in asterisks
+with a single-letter key:
+
+\begin{lstlisting}
+*A28.3**B25.0**C3**D15:35**N53.4*
+\end{lstlisting}
+The parser is stream-tolerant: it handles partial packets, multi-chunk frames and
+missing fields, always keeping the latest known value of each field.
+
+\begin{tabularx}{\linewidth}{@{}clL@{}}
+\toprule
+\textbf{Key} & \textbf{Field} & \textbf{Unit}\\
+\midrule
+A & Speed & km/h\\
+B & Average speed & km/h\\
+C & Lap count & ---\\
+D & Total run time & mm:ss\\
+E & Target lap time & mm:ss\\
+F & Optimal speed & km/h\\
+G & Fuel-cell voltage & V\\
+H & Supercap voltage & V\\
+I & Motor voltage & V\\
+J & Fuel-cell current & A\\
+K & Supercap current & A\\
+L & Motor current & A\\
+M & Own consumption & A\\
+N & Fuel-cell temperature & \degC{}\\
+O & Air-pump duty cycle & \%\\
+P & Driving hint & ---\\
+Q & Cell voltage difference & mV\\
+R & Fuel-cell energy (cumulative) & Ws\\
+S & Motor energy (cumulative) & Ws\\
+T & Fuel-cell efficiency & \%\\
+U & System efficiency & \%\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Distance, motor power ($V \times A$), and energy in Wh are derived on the phone.
+
+\section{MQTT topics \& payloads}
+All messages are \textbf{QoS 0} (fire-and-forget). Empty/NaN fields are omitted to
+keep payloads small (about 100--200 bytes).
+
+\noindent\textbf{\code{thaiger/\{car\}/telemetry}} --- published at the configured
+rate (default 5 Hz):
+
+\begin{lstlisting}
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+\end{lstlisting}
+\noindent\textbf{\code{thaiger/\{car\}/gps}} --- published when a GPS fix is
+available:
+
+\begin{lstlisting}
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lLl@{}}
+\toprule
+\textbf{Field} & \textbf{Meaning} & \textbf{Unit}\\
+\midrule
+ts & Unix timestamp & ms\\
+lat / lon & Latitude / longitude & deg\\
+alt & Altitude (if available) & m\\
+spd & GPS speed (if available) & km/h\\
+acc & Horizontal accuracy (if available) & m\\
+hdg & Heading / bearing (if available) & deg\\
+\bottomrule
+\end{tabularx}
+
+\section{Vehicle profiles}
+
+\begin{tabularx}{\linewidth}{@{}llllL@{}}
+\toprule
+\textbf{Profile} & \textbf{id} & \textbf{Max power} & \textbf{FC temp limit} & \textbf{Min target speed}\\
+\midrule
+Thaiger 7 & \code{thaiger7} & 600 W & 70 \degC{} & 25 km/h\\
+Bengalo   & \code{bengalo}  & 900 W & 65 \degC{} & 25 km/h\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Thresholds can be overridden per car in \textbf{Settings}. The engineer-dashboard
+map trail uses a separate \textbf{200 W} power scale (\code{POWER\_MAX}), tuned for
+the tracking display rather than the car's absolute peak.
+
+\section{Troubleshooting}
+
+\begin{tabularx}{\linewidth}{@{}LL@{}}
+\toprule
+\textbf{Symptom} & \textbf{Cause / fix}\\
+\midrule
+App won't connect over Bluetooth & Pair the module in Android Bluetooth settings first; check it is powered; grant Bluetooth + Location permissions. Use \textbf{Pair New}.\\
+No data, but ``Connected'' & Wrong device, or controller not sending. Try Demo Mode to confirm the app, then re-check the module.\\
+Dashboard never goes green & Wrong WebSocket URL (must be \code{wss://\ldots:8884/mqtt} for HiveMQ Cloud, not the \code{8883} native port), wrong credentials, or no WebSocket listener.\\
+Dashboard green but no telemetry & The \textbf{Car} in the dashboard does not match the phone's car id, or the relay is not enabled on the phone. Both must use the same \code{thaiger7}/\code{bengalo}.\\
+Map is blank & No internet for OSM tiles, or no GPS fixes yet. The map centers only once a fix arrives.\\
+GPS trail jumps around & Cleanup should prevent this; if your device only has very coarse fixes, raise \code{GPS\_MAX\_ACC}. The \textbf{Filtered} counter shows how many fixes are dropped.\\
+GPS updates only every few seconds & Ensure a clear sky view and that Location permission is granted; indoors it falls back to coarse network fixes.\\
+No CSV produced & Complete a run with recorded frames; \emph{Export CSV} reports ``No data to export'' if nothing was captured.\\
+\bottomrule
+\end{tabularx}
+
+\section{Tuning \& advanced settings}
+On the phone (Settings / MQTT Settings): screen wake, speed color, UI update rate,
+vibrate/sound, per-car thresholds, and all broker/relay parameters.
+
+\medskip
+\noindent In \code{engineer\_dashboard.html} (constants near the top of the script
+block):
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Constant} & \textbf{Default} & \textbf{Purpose}\\
+\midrule
+\code{POWER\_MAX} & 200 & Watt value mapped to full red on the trail/legend\\
+\code{GPS\_MAX\_ACC} & 75 & Drop GPS fixes worse than this many metres\\
+\code{GPS\_MAX\_SPEED} & 45 & m/s; faster implied speed is treated as a teleport\\
+\code{GPS\_MIN\_MOVE} & 1.5 & m; smaller moves are treated as stationary jitter\\
+\code{GPS\_SMOOTH} & 0.35 & EMA smoothing factor (0 = none, 1 = raw)\\
+\code{GPS\_MAX\_REJECTS} & 4 & Re-sync after this many consecutive rejected fixes\\
+\code{TRAIL\_MAX} & 250 & Max trail points kept in memory\\
+\bottomrule
+\end{tabularx}
+
+\section{Glossary}
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt,itemindent=0pt]
+  \item[BLE] Bluetooth Low Energy, the radio link from the car controller to the phone.
+  \item[MQTT] A lightweight publish/subscribe messaging protocol; the broker relays messages from the phone to the engineer dashboard.
+  \item[Broker] The MQTT server (e.g. HiveMQ Cloud) both sides connect to.
+  \item[TLS] Encryption for the broker connection.
+  \item[WebSocket] The transport the browser uses to speak MQTT (\code{ws://} / \code{wss://}).
+  \item[Fuel cell (FC)] The hydrogen power source on the car.
+  \item[Supercap] Supercapacitor buffer storing energy for bursts.
+  \item[Trail] The line drawn behind the car on the map, here colored by motor power.
+\end{description}
+
+
+% #####################################################################
+%  PART II - DEUTSCH
+% #####################################################################
+\selectlanguage{ngerman}
+\guidepart{Deutsches Handbuch}
+
+\section{Was dieses Projekt ist}
+ThaiGer Track Control ist ein zweiteiliges Telemetriesystem f\"ur ein
+Wasserstoff-Brennstoffzellen-Rennauto:
+\begin{itemize}
+  \item Eine \textbf{Android-App}, die auf einem Smartphone \emph{im Fahrzeug}
+    l\"auft. Sie empf\"angt Live-Telemetrie vom Steuerger\"at des Autos \"uber
+    \textbf{Bluetooth Low Energy (BLE)}, zeigt sie dem Fahrer auf einem
+    Renn-Dashboard, zeichnet den Lauf auf und \textbf{leitet} die Daten \"uber das
+    Internet per \textbf{MQTT} weiter.
+  \item Ein \textbf{Engineer-Dashboard} --- eine einzelne HTML-Datei
+    (\code{engineer\_dashboard.html}) --- das im Browser auf dem \emph{Laptop des
+    Ingenieurs} in der Box l\"auft. Es abonniert denselben MQTT-Stream und zeigt
+    Betriebsdaten, eine Live-Karte mit leistungsgef\"arbter GPS-Spur und
+    Analyse-Diagramme.
+\end{itemize}
+Beide H\"alften kommunizieren nie direkt; sie treffen sich am \textbf{MQTT-Broker}
+in der Cloud.
+
+\section{System\"uberblick}
+
+\begin{lstlisting}
+   +------------+   BLE    +------------------+   MQTT/TLS   +----------------+
+   | Fahrzeug-  | -------> | Android-App      | -----------> | MQTT-Broker    |
+   | Steuerg.   | *A28.3*  | (Handy im Auto)  | JSON-Frames  | (HiveMQ Cloud) |
+   +------------+          +------------------+              +-------+--------+
+                                  |                                  | WebSocket/TLS
+                                  | GPS (Handy LocationManager)      v
+                                  v                          +----------------+
+                          thaiger/{car}/gps                  | Engineer-      |
+                          thaiger/{car}/telemetry            | Dashboard HTML |
+                                                             +----------------+
+\end{lstlisting}
+\begin{itemize}
+  \item Zwei MQTT-Topics pro Fahrzeug: \code{thaiger/\{car\}/telemetry} und
+    \code{thaiger/\{car\}/gps}.
+  \item \code{\{car\}} ist die Fahrzeug-ID: \code{thaiger7} oder \code{bengalo}.
+  \item Das Handy ver\"offentlicht (publish); das Engineer-Dashboard abonniert
+    (subscribe). Beliebig viele Laptops k\"onnen dasselbe Fahrzeug gleichzeitig
+    beobachten.
+\end{itemize}
+
+\section{Die Android-App}
+
+\subsection{Installation \& erster Start}
+Die App ist ein Standard-Android-Projekt (Gradle). Debug-APK bauen:
+
+\begin{lstlisting}
+./gradlew assembleDebug
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Punkt} & \textbf{Wert}\\
+\midrule
+Minimum-Android & 9.0 (API 28)\\
+Ziel-Android & 14 (API 34)\\
+Sprache & Java 11\\
+App-ID & \code{com.thaiger.h2racing}\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Installiere die APK auf dem Handy, das im Auto bleibt. Beim ersten Start \"offnet
+die App den Bildschirm \textbf{Fahrzeugauswahl}.
+\begin{tgnote}
+\textbf{Tipp.} Montiere das Handy im Querformat so, dass der Fahrer es sieht. Das
+Dashboard h\"alt den Bildschirm w\"ahrend eines Laufs wach (Einstellungen
+\arrow{} \emph{Bildschirm anlassen}).
+\end{tgnote}
+
+\subsection{Berechtigungen}
+Die App fragt Berechtigungen auf dem \textbf{Verbinden}-Bildschirm ab, bevor
+Hardware genutzt wird. Erteile alle f\"ur volle Funktionalit\"at.
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Berechtigung} & \textbf{Wozu sie n\"otig ist}\\
+\midrule
+Bluetooth Connect / Scan (Android 12+) & BLE-Modul des Autos koppeln \& ansprechen\\
+Bluetooth / Bluetooth Admin (Android $\le$ 11) & Dasselbe auf \"alterem Android\\
+Standort (genau) & Von Android f\"ur BLE-Scan \emph{und} f\"ur GPS verlangt\\
+Standort (grob) & GPS-Fallback\\
+Internet & MQTT-Relay zum Ingenieur-Laptop\\
+Wake Lock & Bildschirm w\"ahrend eines Laufs anlassen\\
+Vibration & Haptisches Feedback bei Warnungen\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Verweigerst du Bluetooth, kannst du trotzdem den \textbf{Demo-Modus}
+(synthetische Daten) nutzen.
+
+\subsection{Bildschirm 1 --- Fahrzeugauswahl}
+\begin{itemize}
+  \item Zwei Karten: \textbf{Thaiger 7} und \textbf{Bengalo}. Tippe eine Karte an,
+    um sie auszuw\"ahlen (blauer Rahmen markiert die Auswahl). Thaiger 7 ist
+    Standard.
+  \item Das gew\"ahlte Profil steuert Warnschwellen und Maximalleistungs-Skala.
+  \item Tippe oben auf \textbf{Settings}, um vor einem Lauf die Einstellungen zu
+    \"offnen.
+  \item Tippe auf \textbf{Connect to \ldots}, um zum Verbinden-Bildschirm zu gehen.
+\end{itemize}
+
+\subsection{Bildschirm 2 --- Verbinden (Bluetooth / Demo-Modus)}
+Dieser Bildschirm koppelt das Handy mit dem Auto und startet den Datenstrom.
+\begin{enumerate}
+  \item Die App pr\"uft Berechtigungen und ob Bluetooth an ist.
+  \item Ein Dialog listet deine \textbf{gekoppelten Bluetooth-Ger\"ate} plus einen
+    letzten Eintrag \textbf{Demo-Modus}.
+  \item W\"ahle das Modul deines Autos (z.\,B. ein Ger\"at mit Namen HM-10 / HC-05
+    / ESP32) \textbf{oder} den \textbf{Demo-Modus} f\"ur einen synthetischen
+    Datenstrom ohne Hardware.
+  \item \textbf{Pair Neu} \"offnet die Android-Bluetooth-Einstellungen, falls dein
+    Modul noch nicht gekoppelt ist. \textbf{Cancel} kehrt zur Fahrzeugauswahl
+    zur\"uck.
+\end{enumerate}
+Meldet das Modul \textbf{Connected}, wechselt die App automatisch zum
+Live-Dashboard. Ist das MQTT-Relay aktiviert, startet es hier ebenfalls --- der
+Ingenieur-Laptop empf\"angt Daten, sobald der Lauf beginnt.
+\begin{tgnote}
+Verbindungsabbr\"uche werden automatisch mit exponentiellem Backoff behandelt
+(1 \arrow{} 2 \arrow{} 4 \arrow{} 8 \arrow{} 16 s). Du siehst
+\emph{Reconnecting\ldots} --- kein Eingreifen n\"otig.
+\end{tgnote}
+
+\subsection{Bildschirm 3 --- Live-Dashboard}
+Das Dashboard ist die Hauptansicht des Fahrers (Querformat, Bildschirm bleibt
+wach). Es zeigt laufend den neuesten Wert jedes Telemetriefelds.
+\begin{itemize}
+  \item \textbf{Geschwindigkeit} --- die gro\ss{}e Hero-Zahl (km/h). Ist
+    \emph{Geschwindigkeits-Farbwarnung} an, wird die Zahl \textbf{rot}, wenn du
+    unter die Mindest-Zielgeschwindigkeit f\"allst. Ein Indikator zeigt \ok{} on
+    target / \nope{} too slow.
+  \item \textbf{Runden-Overlay} (eine Zeile \"uber der unteren Leiste):
+    \code{PREV 1:18} \midsep{} \code{LAP 3} \midsep{} \code{CURR 0:09} ---
+    vorherige Rundenzeit, aktuelle Rundennummer und laufende Rundenzeit.
+  \item \textbf{Elektrik-Block} --- Spannung \& Strom von Brennstoffzelle /
+    Supercap / Motor, Eigenverbrauch, Zellspannungsdifferenz.
+  \item \textbf{Thermik \& Effizienz} --- BZ-Temperatur, Luftpumpen-Duty, BZ- und
+    System-Wirkungsgrad, Energien, optimale Geschwindigkeit, Fahrhinweis.
+  \item \textbf{Warn-Banner} --- erscheint, wenn eine Schwelle \"uberschritten wird
+    (z.\,B. BZ-Temperatur oder Zellspannungsdifferenz zu hoch). Mit
+    \emph{Vibration} / \emph{Warnton} an gibt es zus\"atzlich Feedback. Tippe auf
+    \textbf{Dismiss}, um das Banner auszublenden.
+\end{itemize}
+\begin{tgnote}
+\textbf{Einen Lauf beenden:} \textbf{lange auf die Geschwindigkeitszahl
+dr\"ucken.} Das stoppt Bluetooth und das MQTT-Relay, schlie\ss{}t die Statistik ab
+und \"offnet die \textbf{Run-Zusammenfassung}.
+\end{tgnote}
+
+\subsection{Bildschirm 4 --- Run-Zusammenfassung \& CSV-Export}
+Nach einem Lauf siehst du aggregierte Ergebnisse: Laufdauer, Distanz,
+Durchschnittsgeschwindigkeit, verbrauchte Energie, Spitzen-Motorleistung, maximale
+BZ-Temperatur und Anzahl der Warnungen, plus ein \textbf{Leistungsdiagramm}.
+\begin{itemize}
+  \item \textbf{Export CSV} --- schreibt jedes aufgezeichnete Frame in eine
+    CSV-Datei und \"offnet das Teilen-Men\"u. Die Datei hei\ss{}t
+    \code{thaiger\_\{car\}\_\allowbreak\{YYYYMMDD\_HHMM\}.csv} und hat 21 Spalten. Ohne Daten
+    erscheint \emph{\glqq No data to export\grqq{}}.
+  \item \textbf{New Run} --- direkt zur\"uck zum Verbinden.
+  \item \textbf{Back to Car Select} --- zur\"uck zum Anfang.
+\end{itemize}
+
+\subsection{Bildschirm 5 --- Einstellungen}
+Erreichbar \"uber \textbf{Settings} in der Fahrzeugauswahl. Alle Werte werden
+sofort gespeichert.
+
+\subsubsection{Anzeige}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Einstellung} & \textbf{Standard} & \textbf{Bedeutung}\\
+\midrule
+Bildschirm anlassen & An & Wake-Lock halten, damit der Bildschirm nie schl\"aft\\
+Geschwindigkeits-Farbwarnung & An & Geschwindigkeit rot f\"arben, wenn unter der Mindestgeschwindigkeit\\
+Aktualisierungsrate & 50 ms & Wie oft die UI neu zeichnet (20--500 ms)\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Warnungen}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Einstellung} & \textbf{Standard} & \textbf{Bedeutung}\\
+\midrule
+Vibration & An & Haptischer Impuls bei einer Warnung\\
+Warnton & Aus & Ton bei einer Warnung abspielen\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Schwellwerte (pro Fahrzeug)}
+Separat f\"ur Thaiger 7 und Bengalo gespeichert:
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Einstellung} & \textbf{Bereich} & \textbf{Standard (Thaiger 7 / Bengalo)}\\
+\midrule
+BZ-Temperatur max & 30--120 \degC{} & 70 \degC{} / 65 \degC{}\\
+Zellspannungsdifferenz max & 10--500 mV & 50 mV / 50 mV\\
+\bottomrule
+\end{tabularx}
+
+\subsection{Bildschirm 6 --- MQTT-Einstellungen}
+Unterbildschirm der Einstellungen, der das Relay zum Ingenieur-Laptop
+konfiguriert. Das Relay l\"auft nur, wenn es \emph{vor} dem Start aktiviert ist.
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Feld} & \textbf{Standard} & \textbf{Hinweise}\\
+\midrule
+Relay aktivieren & Aus & Hauptschalter --- einschalten, um Telemetrie zu senden\\
+TLS verwenden & An & Verschl\"usselte Verbindung (von HiveMQ Cloud verlangt)\\
+Broker-Host & --- & z.\,B. \code{abc123.s1.eu.hivemq.cloud}\\
+Port & 8883 & TLS-MQTT-Port (8883 typisch; 1883 unverschl\"usselt)\\
+Benutzername & --- & Broker-Benutzername\\
+Passwort & --- & Broker-Passwort (maskiert)\\
+Publish-Rate & 5 Hz & Telemetrie-Senderate, 1--10 Hz\\
+\bottomrule
+\end{tabularx}
+\begin{tgnote}
+Das Handy sendet \"uber \textbf{natives MQTT (TLS)}. Das Engineer-Dashboard
+verbindet sich mit demselben Broker \"uber \textbf{MQTT-\"uber-WebSocket} --- der
+Broker muss also auch einen WebSocket-Listener anbieten (HiveMQ Cloud: Port 8884).
+\end{tgnote}
+
+\section{Das Engineer-Dashboard}
+\code{engineer\_dashboard.html} ist eine einzelne, eigenst\"andige Datei. Sie
+braucht keinen Build-Schritt und keinen Server --- nur einen modernen Browser und
+Internetzugang (Kartenkacheln, Schriften, MQTT-/Diagramm-Bibliotheken vom CDN).
+
+\subsection{\"Offnen \& verbinden}
+\begin{enumerate}
+  \item \"Offne \code{engineer\_dashboard.html} in Chrome/Edge/Firefox.
+  \item Der Dialog \textbf{Connection Settings} \"offnet sich beim ersten Mal
+    automatisch (oder klicke oben rechts auf das Zahnrad).
+  \item Trage ein: \textbf{Car} (\code{Thaiger 7} oder \code{Bengalo}, muss zum
+    Auto passen); \textbf{Broker URL (WebSocket)}, z.\,B.
+    \code{wss://abc123.s1.eu.hivemq.cloud:\allowbreak8884/mqtt} (\code{wss://} f\"ur TLS oder
+    \code{ws://host:port} lokal); \textbf{Username} / \textbf{Password}.
+  \item Klicke \textbf{Connect}. Die Einstellungen werden im Browser gespeichert
+    (\code{localStorage}); n\"achstes Mal automatische Verbindung.
+\end{enumerate}
+Der Status-Punkt oben rechts: grau getrennt, gelb verbindet, gr\"un verbunden. Drei
+Tabs wechseln zwischen \textbf{Operations}, \textbf{Live Tracking} und
+\textbf{Analytics}.
+
+\subsection{Ansicht 1 --- Operations}
+Gesamt\"uberblick: eine \textbf{Hero-Geschwindigkeitskarte} (blau bei/\"uber der
+optimalen Geschwindigkeit, rot darunter) mit Durchschnittsgeschwindigkeit,
+Rundenzahl, Laufzeit, Zielrunde und Distanz; ein \textbf{Elektrik}-Raster; ein
+\textbf{Thermik \& Effizienz}-Raster; und eine pulsierende \textbf{LIVE}-Pille.
+
+\subsection{Ansicht 2 --- Live-Tracking \& Karte}
+Eine bildschirmf\"ullende dunkle \textbf{OpenStreetMap} (Leaflet), die dem Auto
+folgt.
+\begin{itemize}
+  \item \textbf{Leistungsgef\"arbte Spur} --- segmentweise gezeichnet und nach der
+    Motorleistung gef\"arbt: \textcolor{tgreen}{gr\"un (0 W)} \arrow{}
+    \textcolor{tamber}{gelb (100 W)} \arrow{} \textcolor{tred}{rot (200 W+)}. Der
+    neueste Teil ist voll deckend und verblasst mit dem Alter. (200 W ist die max.
+    ThaiGer-Tracking-Leistung; Konstante \code{POWER\_MAX} \"anderbar.)
+  \item \textbf{Leistungslegende} (unten links) --- Farbskala plus Live-Watt-Anzeige.
+  \item \textbf{Rotierender Fahrzeugmarker} zeigt in die Fahrtrichtung.
+  \item \textbf{GPS-Statuspanel} (rechts) --- Fix-Qualit\"at, Genauigkeit, Breite,
+    L\"ange, H\"ohe, GPS-Geschwindigkeit, Kurs, Live-Motorleistung, Rundenzahl und
+    ein \textbf{Filtered}-Z\"ahler.
+\end{itemize}
+
+\subsubsection{GPS-Jitter-Bereinigung}
+Jeder Fix wird in vier Schritten bereinigt: (1) Fixes mit Genauigkeit schlechter
+als 75 m verwerfen; (2) \glqq Teleports\grqq{} ablehnen --- Fixes mit unm\"oglicher
+Geschwindigkeit (\"uber ca.\ 162 km/h), mit Re-Sync-Sicherung; (3) Wackeln unter
+1,5 m im Stand ignorieren; (4) leichte Gl\"attung. Ergebnis: saubere Spur ohne
+Spr\"unge.
+
+\subsubsection{Snapshot \& Reset pro Runde}
+Z\"ahlt der Rundenz\"ahler hoch, rendert das Dashboard die Spur der beendeten Runde
+automatisch zu einem PNG und l\"adt es herunter
+(\code{thaiger-lapN-<Zeitstempel>.png}), leert dann die Spur. Ein gr\"uner Toast
+best\"atigt jede Speicherung.
+
+\subsection{Ansicht 3 --- Analytics}
+Eine \textbf{Live-Telemetrietabelle} mit allen 22 Feldern, plus ein
+\textbf{Speed}-Diagramm (km/h \"uber Zeit) und ein \textbf{Efficiency}-Diagramm
+(BZ- und System-Wirkungsgrad), jeweils die letzten 60 Messwerte.
+
+\section{Telemetrie-Protokoll \& Feldreferenz}
+Das Steuerger\"at sendet ASCII-Frames \"uber BLE. Jedes Feld ist in Asterisken
+eingerahmt, mit einem Einzelbuchstaben als Schl\"ussel:
+
+\begin{lstlisting}
+*A28.3**B25.0**C3**D15:35**N53.4*
+\end{lstlisting}
+Der Parser ist stream-tolerant und beh\"alt stets den letzten bekannten Wert jedes
+Felds.
+
+\begin{tabularx}{\linewidth}{@{}clL@{}}
+\toprule
+\textbf{Schl.} & \textbf{Feld} & \textbf{Einheit}\\
+\midrule
+A & Geschwindigkeit & km/h\\
+B & Durchschnittsgeschwindigkeit & km/h\\
+C & Rundenzahl & ---\\
+D & Gesamtlaufzeit & mm:ss\\
+E & Zielrundenzeit & mm:ss\\
+F & Optimale Geschwindigkeit & km/h\\
+G & Brennstoffzellen-Spannung & V\\
+H & Supercap-Spannung & V\\
+I & Motorspannung & V\\
+J & Brennstoffzellen-Strom & A\\
+K & Supercap-Strom & A\\
+L & Motorstrom & A\\
+M & Eigenverbrauch & A\\
+N & Brennstoffzellen-Temperatur & \degC{}\\
+O & Luftpumpen-Duty-Cycle & \%\\
+P & Fahrhinweis & ---\\
+Q & Zellspannungsdifferenz & mV\\
+R & Brennstoffzellen-Energie (kumuliert) & Ws\\
+S & Motorenergie (kumuliert) & Ws\\
+T & Brennstoffzellen-Wirkungsgrad & \%\\
+U & System-Wirkungsgrad & \%\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Distanz, Motorleistung ($V \times A$) und Energie in Wh werden auf dem Handy
+berechnet.
+
+\section{MQTT-Topics \& Payloads}
+Alle Nachrichten sind \textbf{QoS 0}. Leere/NaN-Felder werden weggelassen (Payload
+ca.\ 100--200 Bytes).
+
+\noindent\textbf{\code{thaiger/\{car\}/telemetry}} --- mit konfigurierter Rate
+(Standard 5 Hz):
+
+\begin{lstlisting}
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+\end{lstlisting}
+\noindent\textbf{\code{thaiger/\{car\}/gps}} --- wenn ein GPS-Fix verf\"ugbar ist:
+
+\begin{lstlisting}
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lLl@{}}
+\toprule
+\textbf{Feld} & \textbf{Bedeutung} & \textbf{Einheit}\\
+\midrule
+ts & Unix-Zeitstempel & ms\\
+lat / lon & Breite / L\"ange & Grad\\
+alt & H\"ohe (falls verf\"ugbar) & m\\
+spd & GPS-Geschwindigkeit (falls verf\"ugbar) & km/h\\
+acc & Horizontale Genauigkeit (falls verf\"ugbar) & m\\
+hdg & Kurs / Peilung (falls verf\"ugbar) & Grad\\
+\bottomrule
+\end{tabularx}
+
+\section{Fahrzeugprofile}
+
+\begin{tabularx}{\linewidth}{@{}llllL@{}}
+\toprule
+\textbf{Profil} & \textbf{id} & \textbf{Max. Leistung} & \textbf{BZ-Temp-Limit} & \textbf{Mindestgeschw.}\\
+\midrule
+Thaiger 7 & \code{thaiger7} & 600 W & 70 \degC{} & 25 km/h\\
+Bengalo & \code{bengalo} & 900 W & 65 \degC{} & 25 km/h\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Schwellwerte k\"onnen pro Auto in den \textbf{Einstellungen} \"uberschrieben
+werden. Die Kartenspur des Engineer-Dashboards nutzt eine separate \textbf{200 W}-
+Leistungsskala (\code{POWER\_MAX}).
+
+\section{Fehlerbehebung}
+
+\begin{tabularx}{\linewidth}{@{}LL@{}}
+\toprule
+\textbf{Symptom} & \textbf{Ursache / Abhilfe}\\
+\midrule
+App verbindet nicht \"uber Bluetooth & Modul zuerst in den Android-Bluetooth-Einstellungen koppeln; Stromversorgung pr\"ufen; Bluetooth- + Standort-Berechtigungen erteilen. \textbf{Pair Neu} nutzen.\\
+Keine Daten, aber \glqq Connected\grqq{} & Falsches Ger\"at oder Steuerger\"at sendet nicht. Demo-Modus testen, dann Modul kontrollieren.\\
+Dashboard wird nie gr\"un & Falsche WebSocket-URL (muss \code{wss://\ldots:8884/mqtt} sein, nicht \code{8883}), falsche Zugangsdaten oder kein WebSocket-Listener.\\
+Dashboard gr\"un, aber keine Telemetrie & Das \textbf{Car} passt nicht zur Fahrzeug-ID, oder das Relay ist am Handy nicht aktiviert. Beide brauchen dasselbe \code{thaiger7}/\code{bengalo}.\\
+Karte ist leer & Kein Internet f\"ur OSM-Kacheln oder noch keine GPS-Fixes. Die Karte zentriert erst mit einem Fix.\\
+GPS-Spur springt & Die Bereinigung sollte das verhindern; bei nur groben Fixes \code{GPS\_MAX\_ACC} erh\"ohen. Der \textbf{Filtered}-Z\"ahler zeigt verworfene Fixes.\\
+GPS aktualisiert nur alle paar Sekunden & Freie Sicht zum Himmel und \textbf{Standort}-Berechtigung sicherstellen; drinnen grobe Netzwerk-Fixes.\\
+Kein CSV erzeugt & Lauf mit aufgezeichneten Frames abschlie\ss{}en; sonst meldet \emph{Export CSV} \glqq No data to export\grqq{}.\\
+\bottomrule
+\end{tabularx}
+
+\section{Feinabstimmung}
+Am Handy (Einstellungen / MQTT-Einstellungen): Bildschirm-Wach, Geschwindigkeits-
+Farbe, UI-Rate, Vibration/Ton, Schwellwerte pro Auto, Broker-/Relay-Parameter.
+
+\medskip
+\noindent In \code{engineer\_dashboard.html} (Konstanten oben im Script-Block):
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Konstante} & \textbf{Standard} & \textbf{Zweck}\\
+\midrule
+\code{POWER\_MAX} & 200 & Watt-Wert f\"ur volles Rot der Spur/Legende\\
+\code{GPS\_MAX\_ACC} & 75 & GPS-Fixes schlechter als so viele Meter verwerfen\\
+\code{GPS\_MAX\_SPEED} & 45 & m/s; schnellere implizierte Geschw. = Teleport\\
+\code{GPS\_MIN\_MOVE} & 1.5 & m; kleinere Bewegungen = Stillstands-Jitter\\
+\code{GPS\_SMOOTH} & 0.35 & EMA-Gl\"attungsfaktor (0 = keine, 1 = roh)\\
+\code{GPS\_MAX\_REJECTS} & 4 & Re-Sync nach so vielen verworfenen Fixes\\
+\code{TRAIL\_MAX} & 250 & Max. Anzahl Spurpunkte im Speicher\\
+\bottomrule
+\end{tabularx}
+
+\section{Glossar}
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt,itemindent=0pt]
+  \item[BLE] Bluetooth Low Energy, die Funkverbindung vom Steuerger\"at zum Handy.
+  \item[MQTT] Leichtgewichtiges Publish/Subscribe-Protokoll; der Broker leitet Nachrichten weiter.
+  \item[Broker] Der MQTT-Server (z.\,B. HiveMQ Cloud), mit dem sich beide Seiten verbinden.
+  \item[TLS] Verschl\"usselung der Broker-Verbindung.
+  \item[WebSocket] Der Transport, \"uber den der Browser MQTT spricht (\code{ws://} / \code{wss://}).
+  \item[Brennstoffzelle (BZ)] Die Wasserstoff-Energiequelle im Auto.
+  \item[Supercap] Superkondensator-Puffer f\"ur Lastspitzen.
+  \item[Spur (Trail)] Die hinter dem Auto gezeichnete Linie, nach Motorleistung gef\"arbt.
+\end{description}
+
+
+% #####################################################################
+%  PART III - CHINESE (Simplified)
+% #####################################################################
+\selectlanguage{english}
+\guidepart{中文使用手册}
+
+\section{本项目是什么}
+ThaiGer Track Control 是一套面向氢燃料电池赛车的两端式遥测系统：
+\begin{itemize}
+  \item 一个运行在\emph{车内手机}上的 \textbf{安卓 App}。它通过\textbf{低功耗蓝牙
+    （BLE）}接收赛车控制器的实时遥测数据，在赛车仪表盘上展示给车手，记录本次行驶，
+    并通过 \textbf{MQTT} 经互联网\textbf{转发}数据。
+  \item 一个 \textbf{工程师仪表盘} —— 一个单独的 HTML 文件
+    （\code{engineer\_dashboard.html}）—— 运行在维修区\emph{工程师笔记本电脑}的浏览
+    器中。它订阅同一条 MQTT 数据流，显示运营数据、带功率着色 GPS 轨迹的实时地图，以及
+    分析图表。
+\end{itemize}
+两端从不直接通信；它们在云端的 \textbf{MQTT 代理服务器（broker）} 处汇合。
+
+\section{系统总览}
+
+\begin{lstlisting}
+   +------------+   BLE    +------------------+   MQTT/TLS   +----------------+
+   | Car        | -------> | Android app      | -----------> | MQTT broker    |
+   | controller | *A28.3*  | (phone in car)   | JSON frames  | (HiveMQ Cloud) |
+   +------------+          +------------------+              +-------+--------+
+                                  |                                  | WebSocket/TLS
+                                  | GPS (phone LocationManager)      v
+                                  v                          +----------------+
+                          thaiger/{car}/gps                  | Engineer       |
+                          thaiger/{car}/telemetry            | Dashboard HTML |
+                                                             +----------------+
+\end{lstlisting}
+\begin{itemize}
+  \item 每辆车有两个 MQTT 主题：\code{thaiger/\{car\}/telemetry} 与
+    \code{thaiger/\{car\}/gps}。
+  \item \code{\{car\}} 是车辆 ID：\code{thaiger7} 或 \code{bengalo}。
+  \item 手机负责发布（publish），工程师仪表盘负责订阅（subscribe）。任意数量的笔记本
+    电脑可同时观看同一辆车。
+\end{itemize}
+
+\section{安卓 App}
+
+\subsection{安装与首次启动}
+本 App 是标准的安卓项目（Gradle）。构建调试版 APK：
+
+\begin{lstlisting}
+./gradlew assembleDebug
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{项目} & \textbf{取值}\\
+\midrule
+最低安卓版本 & 9.0（API 28）\\
+目标安卓版本 & 14（API 34）\\
+语言 & Java 11\\
+应用 ID & \code{com.thaiger.h2racing}\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+将 APK 安装到将放置在车内的手机上。首次启动时，App 打开 \textbf{车辆选择} 界面。
+\begin{tgnote}
+\textbf{提示。} 以横屏方式将手机固定在车手能看到的位置。行驶过程中仪表盘会保持屏幕常亮
+（设置 \arrow{} \emph{保持屏幕常亮}）。
+\end{tgnote}
+
+\subsection{权限}
+App 在使用任何硬件之前，会在 \textbf{连接} 界面请求权限。请全部授予以获得完整功能。
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{权限} & \textbf{用途}\\
+\midrule
+蓝牙连接 / 扫描（安卓 12+） & 配对并与车辆 BLE 模块通信\\
+蓝牙 / 蓝牙管理（安卓 $\le$ 11） & 同上，用于较旧安卓\\
+定位（精确） & 安卓要求其用于 BLE 扫描\emph{以及} GPS\\
+定位（粗略） & GPS 回退\\
+互联网 & 向工程师笔记本电脑做 MQTT 转发\\
+Wake Lock & 行驶中保持屏幕常亮\\
+振动 & 报警时的触感反馈\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+若拒绝蓝牙权限，你仍可使用 \textbf{演示模式}（合成数据）来体验 App。
+
+\subsection{界面 1 —— 车辆选择}
+\begin{itemize}
+  \item 两张卡片：\textbf{Thaiger 7} 与 \textbf{Bengalo}。点按卡片即可选择（蓝色描边
+    标记当前选择）。默认选中 Thaiger 7。
+  \item 所选配置档决定报警阈值与最大功率刻度。
+  \item 点按顶部 \textbf{Settings}，在行驶前打开 App 设置。
+  \item 点按 \textbf{Connect to \ldots} 进入连接界面。
+\end{itemize}
+
+\subsection{界面 2 —— 连接（蓝牙 / 演示模式）}
+此界面把手机与赛车配对并启动数据流。
+\begin{enumerate}
+  \item App 检查权限以及蓝牙是否开启。
+  \item 弹出对话框，列出你\textbf{已配对的蓝牙设备}，并在末尾附上一项 \textbf{演示模式}。
+  \item 选择你赛车的模块（例如名称含 HM-10 / HC-05 / ESP32 的设备），\textbf{或}选择
+    \textbf{演示模式}以在无硬件的情况下运行合成数据流。
+  \item \textbf{Pair Neu / 配对新设备} 会打开安卓蓝牙设置（若模块尚未配对）。
+    \textbf{Cancel} 返回车辆选择。
+\end{enumerate}
+当模块报告 \textbf{Connected（已连接）} 后，App 会自动跳转到实时仪表盘。若已启用 MQTT
+转发，它也会在此启动 —— 一旦行驶开始，工程师笔记本电脑便开始接收数据。
+\begin{tgnote}
+连接中断会以指数退避自动处理（1 \arrow{} 2 \arrow{} 4 \arrow{} 8 \arrow{} 16 秒）。
+你会看到 \emph{Reconnecting\ldots}，无需任何操作。
+\end{tgnote}
+
+\subsection{界面 3 —— 实时仪表盘}
+仪表盘是车手的主视图（横屏，屏幕保持常亮）。它持续刷新，显示每个遥测字段的最新值。
+\begin{itemize}
+  \item \textbf{速度} —— 大号主数字（km/h）。若开启了\emph{速度颜色警告}，当你低于该车
+    的最低目标速度时数字变为\textbf{红色}。一个小指示器显示 \ok{} on target /
+    \nope{} too slow。
+  \item \textbf{圈速浮层}（底部栏上方的一行）：\code{PREV 1:18} \midsep{} \code{LAP 3}
+    \midsep{} \code{CURR 0:09} —— 上一圈用时、当前圈号，以及当前圈的实时计时。
+  \item \textbf{电气区块} —— 燃料电池 / 超级电容 / 电机的电压与电流、自身消耗、电芯电压差。
+  \item \textbf{热与效率} —— 燃料电池温度、空气泵占空比、燃料电池与系统效率、能量、
+    最优速度、驾驶提示。
+  \item \textbf{报警横幅} —— 当某阈值被越过时出现（例如燃料电池温度或电芯电压差过高）。
+    开启\emph{振动} / \emph{报警声} 后还会有触感 / 声音反馈。点按 \textbf{Dismiss}
+    隐藏横幅。
+\end{itemize}
+\begin{tgnote}
+\textbf{结束一次行驶：} \textbf{长按速度数字。} 这会停止蓝牙与 MQTT 转发，结算本次行驶
+统计，并打开 \textbf{赛后总结}。
+\end{tgnote}
+
+\subsection{界面 4 —— 赛后总结与 CSV 导出}
+行驶结束后你会看到汇总结果：行驶时长、距离、平均速度、消耗能量、电机峰值功率、燃料电池
+最高温度，以及报警次数，还有整段行驶的\textbf{功率曲线图}。
+\begin{itemize}
+  \item \textbf{Export CSV（导出 CSV）} —— 将每一帧已记录的遥测数据写入 CSV 文件，并
+    打开安卓分享面板。文件名为 \code{thaiger\_\{car\}\_\allowbreak\{YYYYMMDD\_HHMM\}.csv}，包含 21
+    列。若未记录到数据，会提示 \emph{``No data to export''}。
+  \item \textbf{New Run（新行驶）} —— 直接返回连接界面开始下一次行驶。
+  \item \textbf{Back to Car Select（返回车辆选择）} —— 回到起点。
+\end{itemize}
+
+\subsection{界面 5 —— 设置}
+通过车辆选择界面的 \textbf{Settings} 链接进入。所有取值立即保存。
+
+\subsubsection{显示}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{设置} & \textbf{默认} & \textbf{含义}\\
+\midrule
+保持屏幕常亮 & 开 & 持有 wake lock，使屏幕不休眠\\
+速度颜色警告 & 开 & 低于该车最低目标速度时把速度数字变红\\
+刷新频率 & 50 ms & 仪表盘 UI 的重绘间隔（20--500 ms）\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{报警}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{设置} & \textbf{默认} & \textbf{含义}\\
+\midrule
+振动 & 开 & 报警触发时的触感脉冲\\
+报警声 & 关 & 报警触发时播放提示音\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{阈值（每辆车独立）}
+为 Thaiger 7 与 Bengalo 分别保存：
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{设置} & \textbf{范围} & \textbf{默认（Thaiger 7 / Bengalo）}\\
+\midrule
+燃料电池温度上限 & 30--120 \degC{} & 70 \degC{} / 65 \degC{}\\
+电芯电压差上限 & 10--500 mV & 50 mV / 50 mV\\
+\bottomrule
+\end{tabularx}
+
+\subsection{界面 6 —— MQTT 设置}
+设置的一个子界面，用于配置到工程师笔记本电脑的转发。仅当在开始行驶\emph{之前}启用，转发
+才会运行。
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{字段} & \textbf{默认} & \textbf{说明}\\
+\midrule
+启用转发 & 关 & 总开关 —— 打开后才会发布遥测\\
+使用 TLS & 开 & 加密连接（HiveMQ Cloud 要求）\\
+Broker 主机 & --- & 例如 \code{abc123.s1.eu.hivemq.cloud}\\
+端口 & 8883 & TLS MQTT 端口（通常 8883；明文用 1883）\\
+用户名 & --- & Broker 用户名\\
+密码 & --- & Broker 密码（以掩码显示）\\
+发布频率 & 5 Hz & 遥测发布频率，1--10 Hz\\
+\bottomrule
+\end{tabularx}
+\begin{tgnote}
+手机通过\textbf{原生 MQTT（TLS）}发布。工程师仪表盘通过 \textbf{MQTT over WebSocket}
+连接到同一个 broker —— 因此 broker 还必须暴露一个 WebSocket 监听端口（HiveMQ Cloud
+为端口 8884）。
+\end{tgnote}
+
+\section{工程师仪表盘}
+\code{engineer\_dashboard.html} 是一个单一、自包含的文件。它无需构建步骤、无需服务器
+—— 只要一个现代浏览器与互联网连接（地图瓦片、字体，以及来自 CDN 的 MQTT / 图表库）。
+
+\subsection{打开与连接}
+\begin{enumerate}
+  \item 在 Chrome/Edge/Firefox 中打开 \code{engineer\_dashboard.html}。
+  \item 首次使用时 \textbf{Connection Settings（连接设置）} 对话框会自动弹出（或点击右
+    上角的齿轮按钮）。
+  \item 填写：\textbf{Car}（\code{Thaiger 7} 或 \code{Bengalo}，必须与手机发布时所用
+    的车辆一致）；\textbf{Broker URL (WebSocket)}，例如
+    \code{wss://abc123.s1.eu.hivemq.cloud:\allowbreak8884/mqtt}（TLS 用 \code{wss://}，本地明文用
+    \code{ws://host:port}）；\textbf{Username} / \textbf{Password}。
+  \item 点击 \textbf{Connect}。设置会保存在浏览器中（\code{localStorage}），下次打开会
+    自动重连。
+\end{enumerate}
+右上角的状态圆点：灰色未连接、琥珀色连接中、绿色已连接。顶部三个标签页在
+\textbf{Operations}、\textbf{Live Tracking}、\textbf{Analytics} 间切换。
+
+\subsection{视图 1 —— Operations 运营总览}
+一眼总览：一张\textbf{主速度卡片}（达到/高于最优速度时为蓝色，低于则为红色），含平均
+速度、圈数、行驶时间、目标圈速与距离；一个\textbf{电气}网格；一个\textbf{热与效率}
+网格；以及一个跳动的 \textbf{LIVE} 标记。
+
+\subsection{视图 2 —— Live Tracking 实时追踪与地图}
+一张全屏暗色 \textbf{OpenStreetMap}（Leaflet），跟随赛车。
+\begin{itemize}
+  \item \textbf{功率着色轨迹} —— 按段绘制，并按该时刻的电机功率着色：
+    \textcolor{tgreen}{绿色（0 W）} \arrow{} \textcolor{tamber}{琥珀（100 W）}
+    \arrow{} \textcolor{tred}{红色（200 W+）}。最新部分完全不透明，随时间淡出。
+    （200 W 为 ThaiGer 追踪时的最大功率；常量 \code{POWER\_MAX} 可修改。）
+  \item \textbf{功率图例}（左下角）—— 颜色刻度加上实时瓦数读数。
+  \item \textbf{旋转车辆标记} 指向行驶方向。
+  \item \textbf{GPS 状态面板}（右侧）—— 定位质量、精度、纬度、经度、高度、GPS 速度、
+    航向、实时电机功率、圈数，以及一个 \textbf{Filtered} 计数器。
+\end{itemize}
+
+\subsubsection{GPS 抖动清理}
+每个定位在进入地图前都会经过四步清理：（1）剔除精度差于 75 m 的定位；（2）拒绝“瞬移”
+—— 隐含速度不可能（超过约 162 km/h）的定位，并带有重新同步保护；（3）静止时忽略小于
+1.5 m 的抖动；（4）对残余噪声做轻度平滑。最终得到无随机跳变的干净轨迹。
+
+\subsubsection{每圈快照与重置}
+每当赛车圈数计数器递增时，仪表盘会自动把刚结束那一圈的轨迹渲染为 PNG 图片并下载
+（\code{thaiger-lapN-<时间戳>.png}），随后清空轨迹。每次保存都会有一个绿色提示条确认。
+
+\subsection{视图 3 —— Analytics 分析}
+一张\textbf{实时遥测表格}，列出全部 22 个字段及其当前值；一张 \textbf{Speed（速度）}
+图（km/h 随时间）与一张 \textbf{Efficiency（效率）} 图（燃料电池与系统效率随时间），
+各显示最近约 60 个采样点。
+
+\section{遥测协议与字段参考}
+赛车控制器通过 BLE 发送 ASCII 帧。每个字段以星号包裹，并以单个字母作为键：
+
+\begin{lstlisting}
+*A28.3**B25.0**C3**D15:35**N53.4*
+\end{lstlisting}
+解析器对数据流容错，并始终保留每个字段的最近已知值。
+
+\begin{tabularx}{\linewidth}{@{}clL@{}}
+\toprule
+\textbf{键} & \textbf{字段} & \textbf{单位}\\
+\midrule
+A & 速度 & km/h\\
+B & 平均速度 & km/h\\
+C & 圈数 & ---\\
+D & 总行驶时间 & mm:ss\\
+E & 目标圈速 & mm:ss\\
+F & 最优速度 & km/h\\
+G & 燃料电池电压 & V\\
+H & 超级电容电压 & V\\
+I & 电机电压 & V\\
+J & 燃料电池电流 & A\\
+K & 超级电容电流 & A\\
+L & 电机电流 & A\\
+M & 自身消耗 & A\\
+N & 燃料电池温度 & \degC{}\\
+O & 空气泵占空比 & \%\\
+P & 驾驶提示 & ---\\
+Q & 电芯电压差 & mV\\
+R & 燃料电池累计能量 & Ws\\
+S & 电机累计能量 & Ws\\
+T & 燃料电池效率 & \%\\
+U & 系统效率 & \%\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+距离、电机功率（$V \times A$）以及以 Wh 表示的能量均在手机端推算。
+
+\section{MQTT 主题与负载}
+所有消息均为 \textbf{QoS 0}。空值/NaN 字段会被省略（负载约 100--200 字节）。
+
+\noindent\textbf{\code{thaiger/\{car\}/telemetry}} —— 以配置频率发布（默认 5 Hz）：
+
+\begin{lstlisting}
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+\end{lstlisting}
+\noindent\textbf{\code{thaiger/\{car\}/gps}} —— 在有 GPS 定位时发布：
+
+\begin{lstlisting}
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lLl@{}}
+\toprule
+\textbf{字段} & \textbf{含义} & \textbf{单位}\\
+\midrule
+ts & Unix 时间戳 & ms\\
+lat / lon & 纬度 / 经度 & 度\\
+alt & 高度（若可用） & m\\
+spd & GPS 速度（若可用） & km/h\\
+acc & 水平精度（若可用） & m\\
+hdg & 航向 / 方位（若可用） & 度\\
+\bottomrule
+\end{tabularx}
+
+\section{车辆配置档}
+
+\begin{tabularx}{\linewidth}{@{}llllL@{}}
+\toprule
+\textbf{配置档} & \textbf{id} & \textbf{最大功率} & \textbf{燃料电池温度上限} & \textbf{最低目标速度}\\
+\midrule
+Thaiger 7 & \code{thaiger7} & 600 W & 70 \degC{} & 25 km/h\\
+Bengalo & \code{bengalo} & 900 W & 65 \degC{} & 25 km/h\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+阈值可在 \textbf{设置} 中按车覆盖。工程师仪表盘的地图轨迹使用独立的 \textbf{200 W}
+功率刻度（\code{POWER\_MAX}）。
+
+\section{故障排查}
+
+\begin{tabularx}{\linewidth}{@{}LL@{}}
+\toprule
+\textbf{现象} & \textbf{原因 / 解决}\\
+\midrule
+App 无法通过蓝牙连接 & 先在安卓蓝牙设置中配对模块；检查其已通电；授予蓝牙 + 定位权限。使用 \textbf{Pair Neu / 配对新设备}。\\
+显示“Connected”却无数据 & 选错了设备，或控制器未发送。先用演示模式确认 App，再检查模块。\\
+仪表盘始终不变绿 & WebSocket URL 错误（必须是 \code{wss://\ldots:8884/mqtt}，而非 \code{8883}）、凭据错误，或 broker 没有 WebSocket 监听端口。\\
+仪表盘变绿但无遥测 & 仪表盘中的 \textbf{Car} 与手机车辆 ID 不一致，或手机未启用转发。两端必须相同 \code{thaiger7}/\code{bengalo}。\\
+地图空白 & 没有互联网加载 OSM 瓦片，或尚无 GPS 定位。地图只有在收到定位后才会居中。\\
+GPS 轨迹乱跳 & 清理机制本应避免；若设备只有粗糙定位，调高 \code{GPS\_MAX\_ACC}。\textbf{Filtered} 计数器显示被剔除的定位数。\\
+GPS 每隔几秒才更新一次 & 确保开阔天空视野并授予\textbf{定位}权限；室内会回退到粗糙的网络定位。\\
+未生成 CSV & 必须完成一次有记录帧的行驶；否则 \emph{Export CSV} 会提示 “No data to export”。\\
+\bottomrule
+\end{tabularx}
+
+\section{调参与高级设置}
+在手机上（设置 / MQTT 设置）：屏幕常亮、速度颜色、UI 刷新频率、振动/声音、每车阈值，以
+及所有 broker/转发参数。
+
+\medskip
+\noindent 在 \code{engineer\_dashboard.html} 中（脚本块顶部的常量）：
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{常量} & \textbf{默认} & \textbf{用途}\\
+\midrule
+\code{POWER\_MAX} & 200 & 映射为轨迹/图例满红的瓦数值\\
+\code{GPS\_MAX\_ACC} & 75 & 剔除精度差于此米数的 GPS 定位\\
+\code{GPS\_MAX\_SPEED} & 45 & m/s；隐含速度更快即视为瞬移\\
+\code{GPS\_MIN\_MOVE} & 1.5 & m；更小的移动视为静止抖动\\
+\code{GPS\_SMOOTH} & 0.35 & EMA 平滑系数（0 = 不平滑，1 = 原始）\\
+\code{GPS\_MAX\_REJECTS} & 4 & 连续剔除这么多次后重新同步\\
+\code{TRAIL\_MAX} & 250 & 内存中保留的最大轨迹点数\\
+\bottomrule
+\end{tabularx}
+
+\section{术语表}
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt,itemindent=0pt]
+  \item[BLE] 低功耗蓝牙，赛车控制器到手机的无线链路。
+  \item[MQTT] 一种轻量级的发布/订阅消息协议；broker 把消息从手机转发到工程师仪表盘。
+  \item[Broker（代理服务器）] 双方都连接的 MQTT 服务器（例如 HiveMQ Cloud）。
+  \item[TLS] broker 连接的加密。
+  \item[WebSocket] 浏览器用于承载 MQTT 的传输方式（\code{ws://} / \code{wss://}）。
+  \item[燃料电池（FC）] 赛车上的氢能源。
+  \item[超级电容（Supercap）] 用于应对瞬时大功率的储能缓冲。
+  \item[轨迹（Trail）] 在地图上车后绘制的线，按电机功率着色。
+\end{description}
+
+
+% #####################################################################
+%  PART IV - FRANÇAIS
+% #####################################################################
+\selectlanguage{french}
+\guidepart{Guide en français}
+
+\section{Présentation du projet}
+ThaiGer Track Control est un système de télémétrie en deux parties pour une
+voiture de course à pile à combustible à hydrogène :
+\begin{itemize}
+  \item Une \textbf{application Android} qui tourne sur un téléphone \emph{à bord
+    de la voiture}. Elle reçoit la télémétrie en direct du calculateur de la
+    voiture par \textbf{Bluetooth Low Energy (BLE)}, l'affiche sur un tableau de
+    bord de course pour le pilote, enregistre la session et \textbf{retransmet} les
+    données par internet via \textbf{MQTT}.
+  \item Un \textbf{tableau de bord ingénieur} --- un unique fichier HTML
+    (\code{engineer\_dashboard.html}) --- qui tourne dans un navigateur sur le
+    \emph{portable de l'ingénieur} au stand. Il s'abonne au même flux MQTT et
+    affiche les données d'exploitation, une carte en direct avec une trace GPS
+    colorée par la puissance, et des graphiques d'analyse.
+\end{itemize}
+Les deux moitiés ne communiquent jamais directement ; elles se rejoignent au
+\textbf{courtier MQTT} dans le cloud.
+
+\section{Vue d'ensemble du système}
+
+\begin{lstlisting}
+   +------------+   BLE    +------------------+   MQTT/TLS   +----------------+
+   | Car        | -------> | Android app      | -----------> | MQTT broker    |
+   | controller | *A28.3*  | (phone in car)   | JSON frames  | (HiveMQ Cloud) |
+   +------------+          +------------------+              +-------+--------+
+                                  |                                  | WebSocket/TLS
+                                  | GPS (phone LocationManager)      v
+                                  v                          +----------------+
+                          thaiger/{car}/gps                  | Engineer       |
+                          thaiger/{car}/telemetry            | Dashboard HTML |
+                                                             +----------------+
+\end{lstlisting}
+\begin{itemize}
+  \item Deux sujets MQTT par voiture : \code{thaiger/\{car\}/telemetry} et
+    \code{thaiger/\{car\}/gps}.
+  \item \code{\{car\}} est l'identifiant du véhicule : \code{thaiger7} ou
+    \code{bengalo}.
+  \item Le téléphone publie ; le tableau de bord ingénieur s'abonne. Un nombre
+    quelconque de portables peut suivre la même voiture en même temps.
+\end{itemize}
+
+\section{L'application Android}
+
+\subsection{Installation \& premier démarrage}
+L'application est un projet Android standard (Gradle). Pour construire un APK de
+débogage :
+
+\begin{lstlisting}
+./gradlew assembleDebug
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Élément} & \textbf{Valeur}\\
+\midrule
+Android minimum & 9.0 (API 28)\\
+Android cible & 14 (API 34)\\
+Langage & Java 11\\
+Identifiant & \code{com.thaiger.h2racing}\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Installez l'APK sur le téléphone qui reste dans la voiture. Au premier lancement,
+l'application ouvre l'écran \textbf{Sélection du véhicule}.
+\begin{tgnote}
+\textbf{Astuce.} Montez le téléphone en paysage, visible par le pilote. Le tableau
+de bord garde l'écran allumé pendant une session (Réglages \arrow{} \emph{Garder
+l'écran allumé}).
+\end{tgnote}
+
+\subsection{Autorisations}
+L'application demande les autorisations sur l'écran \textbf{Connexion}, avant
+d'utiliser le matériel. Accordez-les toutes pour un fonctionnement complet.
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Autorisation} & \textbf{Pourquoi elle est nécessaire}\\
+\midrule
+Bluetooth Connect / Scan (Android 12+) & Appairer \& dialoguer avec le module BLE\\
+Bluetooth / Bluetooth Admin (Android $\le$ 11) & Idem, sur Android plus ancien\\
+Localisation (précise) & Exigée par Android pour le scan BLE \emph{et} le GPS\\
+Localisation (approximative) & Repli GPS\\
+Internet & Relais MQTT vers le portable ingénieur\\
+Wake Lock & Garder l'écran allumé pendant une session\\
+Vibreur & Retour haptique pour les alertes\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Si vous refusez le Bluetooth, vous pouvez toujours utiliser le \textbf{mode démo}
+(données synthétiques).
+
+\subsection{Écran 1 --- Sélection du véhicule}
+\begin{itemize}
+  \item Deux cartes : \textbf{Thaiger 7} et \textbf{Bengalo}. Touchez une carte
+    pour la sélectionner (un contour bleu marque la sélection). Thaiger 7 par
+    défaut.
+  \item Le profil choisi pilote les seuils d'alerte et l'échelle de puissance max.
+  \item Touchez \textbf{Settings} (en haut) pour ouvrir les réglages avant une
+    session.
+  \item Touchez \textbf{Connect to \ldots} pour passer à l'écran Connexion.
+\end{itemize}
+
+\subsection{Écran 2 --- Connexion (Bluetooth / mode démo)}
+Cet écran appaire le téléphone à la voiture et démarre le flux de données.
+\begin{enumerate}
+  \item L'application vérifie les autorisations et que le Bluetooth est activé.
+  \item Une boîte de dialogue liste vos \textbf{appareils Bluetooth appairés} plus
+    une dernière entrée \textbf{mode démo}.
+  \item Choisissez le module de votre voiture (p.\,ex. un appareil nommé HM-10 /
+    HC-05 / ESP32), \textbf{ou} choisissez le \textbf{mode démo} pour un flux
+    synthétique sans matériel.
+  \item \textbf{Pair New} ouvre les réglages Bluetooth d'Android si le module n'est
+    pas encore appairé. \textbf{Cancel} revient à la sélection du véhicule.
+\end{enumerate}
+Quand le module indique \textbf{Connected}, l'application passe automatiquement au
+tableau de bord en direct. Si le relais MQTT est activé, il démarre aussi ici : le
+portable ingénieur reçoit les données dès le début de la session.
+\begin{tgnote}
+Les coupures de connexion sont gérées automatiquement avec un délai exponentiel
+(1 \arrow{} 2 \arrow{} 4 \arrow{} 8 \arrow{} 16 s). Vous verrez
+\emph{Reconnecting\ldots} --- aucune action requise.
+\end{tgnote}
+
+\subsection{Écran 3 --- Tableau de bord en direct}
+Le tableau de bord est la vue principale du pilote (paysage, écran allumé). Il
+affiche en continu la dernière valeur de chaque champ de télémétrie.
+\begin{itemize}
+  \item \textbf{Vitesse} --- le grand chiffre principal (km/h). Si l'\emph{alerte
+    couleur de vitesse} est active, le chiffre devient \textbf{rouge} sous la
+    vitesse cible minimale. Un indicateur montre \ok{} on target / \nope{} too slow.
+  \item \textbf{Bandeau de tours} (une ligne au-dessus de la barre du bas) :
+    \code{PREV 1:18} \midsep{} \code{LAP 3} \midsep{} \code{CURR 0:09} --- temps du
+    tour précédent, numéro du tour courant et temps courant.
+  \item \textbf{Bloc électrique} --- tension \& courant pile / supercondensateur /
+    moteur, consommation propre, écart de tension de cellule.
+  \item \textbf{Thermique \& rendement} --- température pile, rapport cyclique de la
+    pompe à air, rendement pile et système, énergies, vitesse optimale, conseil de
+    conduite.
+  \item \textbf{Bandeau d'alerte} --- apparaît quand un seuil est franchi (p.\,ex.
+    température pile ou écart de tension trop élevé). Avec \emph{Vibreur} /
+    \emph{Son d'alerte}, retour haptique / sonore en plus. Touchez \textbf{Dismiss}
+    pour masquer le bandeau.
+\end{itemize}
+\begin{tgnote}
+\textbf{Terminer une session :} \textbf{appui long sur le chiffre de vitesse.} Cela
+arrête le Bluetooth et le relais MQTT, finalise les statistiques et ouvre le
+\textbf{résumé de session}.
+\end{tgnote}
+
+\subsection{Écran 4 --- Résumé de session \& export CSV}
+Après une session, vous voyez des résultats agrégés : durée, distance, vitesse
+moyenne, énergie consommée, puissance moteur maximale, température pile maximale et
+nombre d'alertes, plus un \textbf{graphique de puissance}.
+\begin{itemize}
+  \item \textbf{Export CSV} --- écrit chaque trame enregistrée dans un fichier CSV
+    et ouvre le panneau de partage Android. Le fichier s'appelle
+    \code{thaiger\_\{car\}\_\allowbreak\{YYYYMMDD\_HHMM\}.csv} et contient 21
+    colonnes. Sans données, le message \emph{« No data to export »} apparaît.
+  \item \textbf{New Run} --- retour direct à la Connexion.
+  \item \textbf{Back to Car Select} --- retour au début.
+\end{itemize}
+
+\subsection{Écran 5 --- Réglages}
+Accessible via \textbf{Settings} sur la sélection du véhicule. Tout est enregistré
+immédiatement.
+
+\subsubsection{Affichage}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Réglage} & \textbf{Défaut} & \textbf{Signification}\\
+\midrule
+Garder l'écran allumé & Activé & Maintient un wake lock pour que l'écran ne s'éteigne pas\\
+Alerte couleur de vitesse & Activé & Vitesse en rouge sous la vitesse cible minimale\\
+Fréquence de rafraîchissement & 50 ms & Cadence de redessin de l'IU (20--500 ms)\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Alertes}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Réglage} & \textbf{Défaut} & \textbf{Signification}\\
+\midrule
+Vibreur & Activé & Impulsion haptique à chaque alerte\\
+Son d'alerte & Désactivé & Joue un son à chaque alerte\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Seuils (par véhicule)}
+Stockés séparément pour Thaiger 7 et Bengalo :
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Réglage} & \textbf{Plage} & \textbf{Défaut (Thaiger 7 / Bengalo)}\\
+\midrule
+Température pile max & 30--120 \degC{} & 70 \degC{} / 65 \degC{}\\
+Écart de tension de cellule max & 10--500 mV & 50 mV / 50 mV\\
+\bottomrule
+\end{tabularx}
+
+\subsection{Écran 6 --- Réglages MQTT}
+Un sous-écran des réglages qui configure le relais vers le portable ingénieur. Le
+relais ne tourne que s'il est activé \emph{avant} le démarrage d'une session.
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Champ} & \textbf{Défaut} & \textbf{Remarques}\\
+\midrule
+Activer le relais & Désactivé & Interrupteur principal --- à activer pour publier\\
+Utiliser TLS & Activé & Connexion chiffrée (exigée par HiveMQ Cloud)\\
+Hôte du courtier & --- & p.\,ex. \code{abc123.s1.eu.hivemq.cloud}\\
+Port & 8883 & Port MQTT TLS (8883 typique ; 1883 en clair)\\
+Nom d'utilisateur & --- & Identifiant du courtier\\
+Mot de passe & --- & Mot de passe (affiché masqué)\\
+Fréquence de publication & 5 Hz & Cadence de publication, 1--10 Hz\\
+\bottomrule
+\end{tabularx}
+\begin{tgnote}
+Le téléphone publie en \textbf{MQTT natif (TLS)}. Le tableau de bord ingénieur se
+connecte au \emph{même} courtier en \textbf{MQTT-sur-WebSocket} --- le courtier doit
+donc aussi exposer un écouteur WebSocket (HiveMQ Cloud : port 8884).
+\end{tgnote}
+
+\section{Le tableau de bord ingénieur}
+\code{engineer\_dashboard.html} est un fichier unique et autonome. Aucune
+construction ni serveur --- juste un navigateur moderne et un accès internet (tuiles
+de carte, polices et bibliothèques MQTT/graphiques via CDN).
+
+\subsection{Ouverture \& connexion}
+\begin{enumerate}
+  \item Ouvrez \code{engineer\_dashboard.html} dans Chrome/Edge/Firefox.
+  \item La boîte \textbf{Connection Settings} s'ouvre automatiquement la première
+    fois (ou cliquez sur l'engrenage, en haut à droite).
+  \item Renseignez : \textbf{Car} (\code{Thaiger 7} ou \code{Bengalo}, identique au
+    véhicule publié) ; \textbf{Broker URL (WebSocket)}, p.\,ex.
+    \code{wss://abc123.s1.eu.hivemq.cloud:\allowbreak8884/mqtt} (\code{wss://} pour TLS, ou
+    \code{ws://host:port} en local) ; \textbf{Username} / \textbf{Password}.
+  \item Cliquez \textbf{Connect}. Les réglages sont mémorisés dans le navigateur
+    (\code{localStorage}) ; reconnexion automatique ensuite.
+\end{enumerate}
+Le point d'état (en haut à droite) : gris déconnecté, ambre en cours, vert
+connecté. Trois onglets basculent entre \textbf{Operations}, \textbf{Live Tracking}
+et \textbf{Analytics}.
+
+\subsection{Vue 1 --- Operations}
+Un aperçu d'un coup d'œil : une \textbf{carte vitesse principale} (bleue à/au-dessus
+de la vitesse optimale, rouge en dessous) avec vitesse moyenne, nombre de tours,
+temps de session, tour cible et distance ; une grille \textbf{Électrique} ; une
+grille \textbf{Thermique \& Rendement} ; et une pastille \textbf{LIVE} clignotante.
+
+\subsection{Vue 2 --- Live Tracking \& carte}
+Une \textbf{OpenStreetMap} sombre plein écran (Leaflet) qui suit la voiture.
+\begin{itemize}
+  \item \textbf{Trace colorée par la puissance} --- dessinée segment par segment et
+    colorée selon la puissance moteur : \textcolor{tgreen}{vert (0 W)} \arrow{}
+    \textcolor{tamber}{ambre (100 W)} \arrow{} \textcolor{tred}{rouge (200 W+)}. La
+    partie la plus récente est opaque puis s'estompe. (200 W est la puissance max de
+    suivi ThaiGer ; la constante \code{POWER\_MAX} est modifiable.)
+  \item \textbf{Légende de puissance} (en bas à gauche) --- l'échelle de couleurs
+    plus un affichage en watts en direct.
+  \item \textbf{Marqueur de voiture} orienté dans le sens de la marche.
+  \item \textbf{Panneau d'état GPS} (à droite) --- qualité du fix, précision,
+    latitude, longitude, altitude, vitesse GPS, cap, puissance moteur, nombre de
+    tours et un compteur \textbf{Filtered}.
+\end{itemize}
+
+\subsubsection{Nettoyage du bruit GPS}
+Chaque fix est nettoyé en quatre étapes : (1) rejet des fix de précision pire que
+75 m ; (2) rejet des « téléportations » --- vitesse implicite impossible (plus de
+162 km/h env.), avec une garde de resynchronisation ; (3) ignorer le tremblement
+sous 1,5 m à l'arrêt ; (4) léger lissage. Résultat : une trace propre sans sauts.
+
+\subsubsection{Capture par tour + remise à zéro}
+À chaque incrément du compteur de tours, le tableau de bord rend la trace du tour
+terminé en image PNG et la télécharge
+(\code{thaiger-lapN-<horodatage>.png}), puis efface la trace. Un message vert
+confirme chaque enregistrement.
+
+\subsection{Vue 3 --- Analytics}
+Un \textbf{tableau de télémétrie en direct} listant les 22 champs, plus un graphique
+\textbf{Speed} (km/h dans le temps) et un graphique \textbf{Efficiency} (rendement
+pile et système), chacun sur les 60 derniers points.
+
+\section{Protocole de télémétrie \& référence des champs}
+Le calculateur envoie des trames ASCII par BLE. Chaque champ est encadré
+d'astérisques avec une clé d'une lettre :
+
+\begin{lstlisting}
+*A28.3**B25.0**C3**D15:35**N53.4*
+\end{lstlisting}
+L'analyseur tolère le flux et conserve toujours la dernière valeur connue de chaque
+champ.
+
+\begin{tabularx}{\linewidth}{@{}clL@{}}
+\toprule
+\textbf{Clé} & \textbf{Champ} & \textbf{Unité}\\
+\midrule
+A & Vitesse & km/h\\
+B & Vitesse moyenne & km/h\\
+C & Nombre de tours & ---\\
+D & Temps total & mm:ss\\
+E & Temps de tour cible & mm:ss\\
+F & Vitesse optimale & km/h\\
+G & Tension pile & V\\
+H & Tension supercondensateur & V\\
+I & Tension moteur & V\\
+J & Courant pile & A\\
+K & Courant supercondensateur & A\\
+L & Courant moteur & A\\
+M & Consommation propre & A\\
+N & Température pile & \degC{}\\
+O & Rapport cyclique pompe à air & \%\\
+P & Conseil de conduite & ---\\
+Q & Écart de tension de cellule & mV\\
+R & Énergie pile (cumulée) & Ws\\
+S & Énergie moteur (cumulée) & Ws\\
+T & Rendement pile & \%\\
+U & Rendement système & \%\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+La distance, la puissance moteur ($V \times A$) et l'énergie en Wh sont calculées sur
+le téléphone.
+
+\section{Sujets MQTT \& charges utiles}
+Tous les messages sont en \textbf{QoS 0}. Les champs vides/NaN sont omis (charge
+utile d'environ 100--200 octets).
+
+\noindent\textbf{\code{thaiger/\{car\}/telemetry}} --- publié à la cadence réglée
+(5 Hz par défaut) :
+
+\begin{lstlisting}
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+\end{lstlisting}
+\noindent\textbf{\code{thaiger/\{car\}/gps}} --- publié quand un fix GPS est
+disponible :
+
+\begin{lstlisting}
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lLl@{}}
+\toprule
+\textbf{Champ} & \textbf{Signification} & \textbf{Unité}\\
+\midrule
+ts & Horodatage Unix & ms\\
+lat / lon & Latitude / longitude & deg\\
+alt & Altitude (si disponible) & m\\
+spd & Vitesse GPS (si disponible) & km/h\\
+acc & Précision horizontale (si disponible) & m\\
+hdg & Cap (si disponible) & deg\\
+\bottomrule
+\end{tabularx}
+
+\section{Profils de véhicule}
+
+\begin{tabularx}{\linewidth}{@{}llllL@{}}
+\toprule
+\textbf{Profil} & \textbf{id} & \textbf{Puiss. max} & \textbf{Limite temp. pile} & \textbf{Vitesse cible min}\\
+\midrule
+Thaiger 7 & \code{thaiger7} & 600 W & 70 \degC{} & 25 km/h\\
+Bengalo & \code{bengalo} & 900 W & 65 \degC{} & 25 km/h\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Les seuils sont réglables par voiture dans les \textbf{Réglages}. La trace de la
+carte ingénieur utilise une échelle de puissance distincte de \textbf{200 W}
+(\code{POWER\_MAX}).
+
+\section{Dépannage}
+
+\begin{tabularx}{\linewidth}{@{}LL@{}}
+\toprule
+\textbf{Symptôme} & \textbf{Cause / solution}\\
+\midrule
+Pas de connexion Bluetooth & Appairez d'abord le module dans les réglages Bluetooth ; vérifiez l'alimentation ; accordez Bluetooth + Localisation. Utilisez \textbf{Pair New}.\\
+« Connected » mais pas de données & Mauvais appareil, ou calculateur muet. Testez le mode démo, puis revérifiez le module.\\
+Le tableau de bord ne passe pas au vert & Mauvaise URL WebSocket (doit être \code{wss://\ldots:8884/mqtt}, pas le port \code{8883}), identifiants faux, ou pas d'écouteur WebSocket.\\
+Vert mais pas de télémétrie & Le \textbf{Car} du tableau de bord ne correspond pas à l'id du téléphone, ou le relais n'est pas activé. Même \code{thaiger7}/\code{bengalo} des deux côtés.\\
+Carte vide & Pas d'internet pour les tuiles OSM, ou pas encore de fix GPS. La carte se centre au premier fix.\\
+La trace GPS saute & Le nettoyage devrait l'éviter ; pour des fix très grossiers, augmentez \code{GPS\_MAX\_ACC}. Le compteur \textbf{Filtered} indique les rejets.\\
+GPS lent (quelques secondes) & Vue dégagée du ciel et autorisation \textbf{Localisation} ; en intérieur, repli sur des fix réseau grossiers.\\
+Pas de CSV & Terminez une session avec des trames enregistrées ; sinon \emph{Export CSV} indique « No data to export ».\\
+\bottomrule
+\end{tabularx}
+
+\section{Réglages avancés}
+Sur le téléphone (Réglages / Réglages MQTT) : écran allumé, couleur de vitesse,
+cadence de l'IU, vibreur/son, seuils par voiture, et tous les paramètres
+courtier/relais.
+
+\medskip
+\noindent Dans \code{engineer\_dashboard.html} (constantes en haut du script) :
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Constante} & \textbf{Défaut} & \textbf{Rôle}\\
+\midrule
+\code{POWER\_MAX} & 200 & Valeur en watts mappée au rouge plein\\
+\code{GPS\_MAX\_ACC} & 75 & Rejeter les fix moins précis que ce nombre de mètres\\
+\code{GPS\_MAX\_SPEED} & 45 & m/s ; au-delà, considéré comme téléportation\\
+\code{GPS\_MIN\_MOVE} & 1.5 & m ; en dessous, tremblement à l'arrêt\\
+\code{GPS\_SMOOTH} & 0.35 & Facteur de lissage EMA (0 = aucun, 1 = brut)\\
+\code{GPS\_MAX\_REJECTS} & 4 & Resync après ce nombre de rejets consécutifs\\
+\code{TRAIL\_MAX} & 250 & Nombre max de points de trace en mémoire\\
+\bottomrule
+\end{tabularx}
+
+\section{Glossaire}
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt,itemindent=0pt]
+  \item[BLE] Bluetooth Low Energy, la liaison radio du calculateur au téléphone.
+  \item[MQTT] Protocole léger de publication/abonnement ; le courtier relaie les messages.
+  \item[Courtier (broker)] Le serveur MQTT (p.\,ex. HiveMQ Cloud) auquel les deux côtés se connectent.
+  \item[TLS] Chiffrement de la connexion au courtier.
+  \item[WebSocket] Le transport utilisé par le navigateur pour parler MQTT (\code{ws://} / \code{wss://}).
+  \item[Pile à combustible (FC)] La source d'énergie à hydrogène de la voiture.
+  \item[Supercondensateur] Tampon d'énergie pour les pointes de charge.
+  \item[Trace] La ligne dessinée derrière la voiture, colorée par la puissance moteur.
+\end{description}
+
+
+% #####################################################################
+%  PART V - ESPAÑOL
+% #####################################################################
+\selectlanguage{spanish}
+\guidepart{Guía en español}
+
+\section{Qué es este proyecto}
+ThaiGer Track Control es un sistema de telemetría de dos partes para un coche de
+carreras de pila de combustible de hidrógeno:
+\begin{itemize}
+  \item Una \textbf{app de Android} que se ejecuta en un teléfono \emph{dentro del
+    coche}. Recibe la telemetría en vivo del controlador del coche por
+    \textbf{Bluetooth Low Energy (BLE)}, la muestra en un panel de carreras para el
+    piloto, registra la sesión y \textbf{retransmite} los datos por internet vía
+    \textbf{MQTT}.
+  \item Un \textbf{panel del ingeniero} --- un único archivo HTML
+    (\code{engineer\_dashboard.html}) --- que se ejecuta en un navegador en el
+    \emph{portátil del ingeniero} en el box. Se suscribe al mismo flujo MQTT y
+    muestra datos de operación, un mapa en vivo con una traza GPS coloreada por
+    potencia, y gráficas de análisis.
+\end{itemize}
+Las dos mitades nunca se comunican directamente; se encuentran en el
+\textbf{broker MQTT} en la nube.
+
+\section{Visión general del sistema}
+
+\begin{lstlisting}
+   +------------+   BLE    +------------------+   MQTT/TLS   +----------------+
+   | Car        | -------> | Android app      | -----------> | MQTT broker    |
+   | controller | *A28.3*  | (phone in car)   | JSON frames  | (HiveMQ Cloud) |
+   +------------+          +------------------+              +-------+--------+
+                                  |                                  | WebSocket/TLS
+                                  | GPS (phone LocationManager)      v
+                                  v                          +----------------+
+                          thaiger/{car}/gps                  | Engineer       |
+                          thaiger/{car}/telemetry            | Dashboard HTML |
+                                                             +----------------+
+\end{lstlisting}
+\begin{itemize}
+  \item Dos temas MQTT por coche: \code{thaiger/\{car\}/telemetry} y
+    \code{thaiger/\{car\}/gps}.
+  \item \code{\{car\}} es el id del vehículo: \code{thaiger7} o \code{bengalo}.
+  \item El teléfono publica; el panel del ingeniero se suscribe. Cualquier número de
+    portátiles puede observar el mismo coche a la vez.
+\end{itemize}
+
+\section{La app de Android}
+
+\subsection{Instalación \& primer arranque}
+La app es un proyecto Android estándar (Gradle). Para construir un APK de
+depuración:
+
+\begin{lstlisting}
+./gradlew assembleDebug
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Elemento} & \textbf{Valor}\\
+\midrule
+Android mínimo & 9.0 (API 28)\\
+Android objetivo & 14 (API 34)\\
+Lenguaje & Java 11\\
+Id de app & \code{com.thaiger.h2racing}\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Instala el APK en el teléfono que va en el coche. En el primer arranque, la app
+abre la pantalla \textbf{Selección de vehículo}.
+\begin{tgnote}
+\textbf{Consejo.} Monta el teléfono en horizontal, visible para el piloto. El panel
+mantiene la pantalla encendida durante una sesión (Ajustes \arrow{} \emph{Mantener
+pantalla encendida}).
+\end{tgnote}
+
+\subsection{Permisos}
+La app pide permisos en la pantalla \textbf{Conexión}, antes de usar el hardware.
+Concédelos todos para una funcionalidad completa.
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Permiso} & \textbf{Por qué es necesario}\\
+\midrule
+Bluetooth Connect / Scan (Android 12+) & Emparejar \& hablar con el módulo BLE\\
+Bluetooth / Bluetooth Admin (Android $\le$ 11) & Igual, en Android más antiguo\\
+Ubicación (precisa) & Exigida por Android para el escaneo BLE \emph{y} el GPS\\
+Ubicación (aproximada) & Respaldo GPS\\
+Internet & Relé MQTT al portátil del ingeniero\\
+Wake Lock & Mantener la pantalla encendida durante una sesión\\
+Vibración & Respuesta háptica para alertas\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Si rechazas el Bluetooth, aún puedes usar el \textbf{modo demo} (datos sintéticos).
+
+\subsection{Pantalla 1 --- Selección de vehículo}
+\begin{itemize}
+  \item Dos tarjetas: \textbf{Thaiger 7} y \textbf{Bengalo}. Toca una tarjeta para
+    seleccionarla (un borde azul marca la selección). Thaiger 7 por defecto.
+  \item El perfil elegido controla los umbrales de alerta y la escala de potencia
+    máxima.
+  \item Toca \textbf{Settings} (arriba) para abrir los ajustes antes de una sesión.
+  \item Toca \textbf{Connect to \ldots} para pasar a la pantalla Conexión.
+\end{itemize}
+
+\subsection{Pantalla 2 --- Conexión (Bluetooth / modo demo)}
+Esta pantalla empareja el teléfono con el coche e inicia el flujo de datos.
+\begin{enumerate}
+  \item La app comprueba los permisos y que el Bluetooth esté activado.
+  \item Un diálogo lista tus \textbf{dispositivos Bluetooth emparejados} más una
+    entrada final \textbf{modo demo}.
+  \item Elige el módulo de tu coche (p.\,ej. un dispositivo llamado HM-10 / HC-05 /
+    ESP32), \textbf{o} elige el \textbf{modo demo} para un flujo sintético sin
+    hardware.
+  \item \textbf{Pair New} abre los ajustes Bluetooth de Android si el módulo no está
+    emparejado. \textbf{Cancel} vuelve a la selección de vehículo.
+\end{enumerate}
+Cuando el módulo indica \textbf{Connected}, la app avanza automáticamente al panel
+en vivo. Si el relé MQTT está activado, también arranca aquí: el portátil del
+ingeniero recibe datos en cuanto empieza la sesión.
+\begin{tgnote}
+Las caídas de conexión se gestionan automáticamente con retroceso exponencial
+(1 \arrow{} 2 \arrow{} 4 \arrow{} 8 \arrow{} 16 s). Verás \emph{Reconnecting\ldots}
+--- sin acción necesaria.
+\end{tgnote}
+
+\subsection{Pantalla 3 --- Panel en vivo}
+El panel es la vista principal del piloto (horizontal, pantalla encendida). Muestra
+en continuo el último valor de cada campo de telemetría.
+\begin{itemize}
+  \item \textbf{Velocidad} --- el número principal grande (km/h). Si la \emph{alerta
+    de color de velocidad} está activa, el número se vuelve \textbf{rojo} por debajo
+    de la velocidad objetivo mínima. Un indicador muestra \ok{} on target /
+    \nope{} too slow.
+  \item \textbf{Barra de vueltas} (una línea sobre la barra inferior):
+    \code{PREV 1:18} \midsep{} \code{LAP 3} \midsep{} \code{CURR 0:09} --- tiempo de
+    la vuelta anterior, número de vuelta actual y tiempo actual.
+  \item \textbf{Bloque eléctrico} --- tensión \& corriente de pila /
+    supercondensador / motor, consumo propio, diferencia de tensión de celda.
+  \item \textbf{Térmica \& eficiencia} --- temperatura de pila, ciclo de trabajo de
+    la bomba de aire, eficiencia de pila y sistema, energías, velocidad óptima,
+    consejo de conducción.
+  \item \textbf{Banner de alerta} --- aparece al cruzar un umbral (p.\,ej.
+    temperatura de pila o diferencia de tensión demasiado altas). Con
+    \emph{Vibración} / \emph{Sonido de alerta}, respuesta háptica / sonora además.
+    Toca \textbf{Dismiss} para ocultarlo.
+\end{itemize}
+\begin{tgnote}
+\textbf{Terminar una sesión:} \textbf{pulsación larga sobre el número de
+velocidad.} Detiene el Bluetooth y el relé MQTT, finaliza las estadísticas y abre el
+\textbf{resumen de sesión}.
+\end{tgnote}
+
+\subsection{Pantalla 4 --- Resumen de sesión \& exportación CSV}
+Tras una sesión verás resultados agregados: duración, distancia, velocidad media,
+energía consumida, potencia máxima del motor, temperatura máxima de pila y número de
+alertas, más una \textbf{gráfica de potencia}.
+\begin{itemize}
+  \item \textbf{Export CSV} --- escribe cada trama registrada en un archivo CSV y
+    abre el panel de compartir de Android. El archivo se llama
+    \code{thaiger\_\{car\}\_\allowbreak\{YYYYMMDD\_HHMM\}.csv} y tiene 21 columnas.
+    Sin datos aparece \emph{«No data to export»}.
+  \item \textbf{New Run} --- vuelta directa a la Conexión.
+  \item \textbf{Back to Car Select} --- volver al inicio.
+\end{itemize}
+
+\subsection{Pantalla 5 --- Ajustes}
+Accesible desde \textbf{Settings} en la selección de vehículo. Todo se guarda al
+instante.
+
+\subsubsection{Pantalla}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Ajuste} & \textbf{Defecto} & \textbf{Significado}\\
+\midrule
+Mantener pantalla encendida & Sí & Mantiene un wake lock para que la pantalla no se apague\\
+Alerta de color de velocidad & Sí & Velocidad en rojo bajo la velocidad objetivo mínima\\
+Frecuencia de actualización & 50 ms & Cada cuánto se redibuja la IU (20--500 ms)\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Alertas}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Ajuste} & \textbf{Defecto} & \textbf{Significado}\\
+\midrule
+Vibración & Sí & Impulso háptico en cada alerta\\
+Sonido de alerta & No & Reproduce un tono en cada alerta\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Umbrales (por vehículo)}
+Guardados por separado para Thaiger 7 y Bengalo:
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Ajuste} & \textbf{Rango} & \textbf{Defecto (Thaiger 7 / Bengalo)}\\
+\midrule
+Temperatura pila máx & 30--120 \degC{} & 70 \degC{} / 65 \degC{}\\
+Diferencia de tensión de celda máx & 10--500 mV & 50 mV / 50 mV\\
+\bottomrule
+\end{tabularx}
+
+\subsection{Pantalla 6 --- Ajustes MQTT}
+Una subpantalla de ajustes que configura el relé al portátil del ingeniero. El relé
+solo funciona si se activa \emph{antes} de iniciar una sesión.
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Campo} & \textbf{Defecto} & \textbf{Notas}\\
+\midrule
+Activar relé & No & Interruptor principal --- actívalo para publicar\\
+Usar TLS & Sí & Conexión cifrada (exigida por HiveMQ Cloud)\\
+Host del broker & --- & p.\,ej. \code{abc123.s1.eu.hivemq.cloud}\\
+Puerto & 8883 & Puerto MQTT TLS (8883 típico; 1883 en claro)\\
+Usuario & --- & Usuario del broker\\
+Contraseña & --- & Contraseña (mostrada oculta)\\
+Frecuencia de publicación & 5 Hz & Tasa de publicación, 1--10 Hz\\
+\bottomrule
+\end{tabularx}
+\begin{tgnote}
+El teléfono publica por \textbf{MQTT nativo (TLS)}. El panel del ingeniero se conecta
+al \emph{mismo} broker por \textbf{MQTT sobre WebSocket} --- el broker debe exponer
+también un escuchador WebSocket (HiveMQ Cloud: puerto 8884).
+\end{tgnote}
+
+\section{El panel del ingeniero}
+\code{engineer\_dashboard.html} es un único archivo autónomo. Sin compilación ni
+servidor --- solo un navegador moderno y acceso a internet (teselas del mapa, fuentes
+y bibliotecas MQTT/gráficas vía CDN).
+
+\subsection{Apertura \& conexión}
+\begin{enumerate}
+  \item Abre \code{engineer\_dashboard.html} en Chrome/Edge/Firefox.
+  \item El diálogo \textbf{Connection Settings} se abre solo la primera vez (o haz
+    clic en el engranaje, arriba a la derecha).
+  \item Rellena: \textbf{Car} (\code{Thaiger 7} o \code{Bengalo}, igual al vehículo
+    publicado); \textbf{Broker URL (WebSocket)}, p.\,ej.
+    \code{wss://abc123.s1.eu.hivemq.cloud:\allowbreak8884/mqtt} (\code{wss://} para TLS, o
+    \code{ws://host:port} en local); \textbf{Username} / \textbf{Password}.
+  \item Haz clic en \textbf{Connect}. Los ajustes se guardan en el navegador
+    (\code{localStorage}); reconexión automática la próxima vez.
+\end{enumerate}
+El punto de estado (arriba a la derecha): gris desconectado, ámbar conectando, verde
+conectado. Tres pestañas cambian entre \textbf{Operations}, \textbf{Live Tracking} y
+\textbf{Analytics}.
+
+\subsection{Vista 1 --- Operations}
+Una visión de un vistazo: una \textbf{tarjeta de velocidad principal} (azul a/por
+encima de la velocidad óptima, roja por debajo) con velocidad media, vueltas, tiempo
+de sesión, vuelta objetivo y distancia; una rejilla \textbf{Eléctrica}; una rejilla
+\textbf{Térmica \& Eficiencia}; y una píldora \textbf{LIVE} parpadeante.
+
+\subsection{Vista 2 --- Live Tracking \& mapa}
+Un \textbf{OpenStreetMap} oscuro a pantalla completa (Leaflet) que sigue al coche.
+\begin{itemize}
+  \item \textbf{Traza coloreada por potencia} --- dibujada segmento a segmento y
+    coloreada según la potencia del motor: \textcolor{tgreen}{verde (0 W)} \arrow{}
+    \textcolor{tamber}{ámbar (100 W)} \arrow{} \textcolor{tred}{rojo (200 W+)}. La
+    parte más reciente es opaca y se desvanece con el tiempo. (200 W es la potencia
+    máxima de seguimiento ThaiGer; la constante \code{POWER\_MAX} es modificable.)
+  \item \textbf{Leyenda de potencia} (abajo a la izquierda) --- la escala de color
+    más una lectura en vatios en vivo.
+  \item \textbf{Marcador del coche} orientado en el sentido de la marcha.
+  \item \textbf{Panel de estado GPS} (derecha) --- calidad del fix, precisión,
+    latitud, longitud, altitud, velocidad GPS, rumbo, potencia del motor, vueltas y
+    un contador \textbf{Filtered}.
+\end{itemize}
+
+\subsubsection{Limpieza del ruido GPS}
+Cada fix se limpia en cuatro pasos: (1) descartar fixes con precisión peor que 75 m;
+(2) rechazar «teletransportes» --- velocidad implícita imposible (más de 162 km/h
+aprox.), con una guarda de resincronización; (3) ignorar el temblor bajo 1,5 m en
+parado; (4) suavizado ligero. Resultado: una traza limpia sin saltos.
+
+\subsubsection{Captura por vuelta + reinicio}
+Cada vez que el contador de vueltas se incrementa, el panel renderiza la traza de la
+vuelta terminada como imagen PNG y la descarga (\code{thaiger-lapN-<marca>.png}),
+y luego borra la traza. Un aviso verde confirma cada guardado.
+
+\subsection{Vista 3 --- Analytics}
+Una \textbf{tabla de telemetría en vivo} con los 22 campos, más una gráfica
+\textbf{Speed} (km/h en el tiempo) y una gráfica \textbf{Efficiency} (eficiencia de
+pila y sistema), cada una con los últimos 60 puntos.
+
+\section{Protocolo de telemetría \& referencia de campos}
+El controlador envía tramas ASCII por BLE. Cada campo va entre asteriscos con una
+clave de una letra:
+
+\begin{lstlisting}
+*A28.3**B25.0**C3**D15:35**N53.4*
+\end{lstlisting}
+El analizador tolera el flujo y conserva siempre el último valor conocido de cada
+campo.
+
+\begin{tabularx}{\linewidth}{@{}clL@{}}
+\toprule
+\textbf{Clave} & \textbf{Campo} & \textbf{Unidad}\\
+\midrule
+A & Velocidad & km/h\\
+B & Velocidad media & km/h\\
+C & Número de vueltas & ---\\
+D & Tiempo total & mm:ss\\
+E & Tiempo de vuelta objetivo & mm:ss\\
+F & Velocidad óptima & km/h\\
+G & Tensión de pila & V\\
+H & Tensión de supercondensador & V\\
+I & Tensión de motor & V\\
+J & Corriente de pila & A\\
+K & Corriente de supercondensador & A\\
+L & Corriente de motor & A\\
+M & Consumo propio & A\\
+N & Temperatura de pila & \degC{}\\
+O & Ciclo de trabajo de bomba de aire & \%\\
+P & Consejo de conducción & ---\\
+Q & Diferencia de tensión de celda & mV\\
+R & Energía de pila (acumulada) & Ws\\
+S & Energía de motor (acumulada) & Ws\\
+T & Eficiencia de pila & \%\\
+U & Eficiencia del sistema & \%\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+La distancia, la potencia del motor ($V \times A$) y la energía en Wh se calculan en
+el teléfono.
+
+\section{Temas MQTT \& cargas útiles}
+Todos los mensajes son \textbf{QoS 0}. Los campos vacíos/NaN se omiten (carga útil de
+unos 100--200 bytes).
+
+\noindent\textbf{\code{thaiger/\{car\}/telemetry}} --- publicado a la tasa
+configurada (5 Hz por defecto):
+
+\begin{lstlisting}
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+\end{lstlisting}
+\noindent\textbf{\code{thaiger/\{car\}/gps}} --- publicado cuando hay un fix GPS:
+
+\begin{lstlisting}
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lLl@{}}
+\toprule
+\textbf{Campo} & \textbf{Significado} & \textbf{Unidad}\\
+\midrule
+ts & Marca de tiempo Unix & ms\\
+lat / lon & Latitud / longitud & grados\\
+alt & Altitud (si disponible) & m\\
+spd & Velocidad GPS (si disponible) & km/h\\
+acc & Precisión horizontal (si disponible) & m\\
+hdg & Rumbo (si disponible) & grados\\
+\bottomrule
+\end{tabularx}
+
+\section{Perfiles de vehículo}
+
+\begin{tabularx}{\linewidth}{@{}llllL@{}}
+\toprule
+\textbf{Perfil} & \textbf{id} & \textbf{Pot. máx} & \textbf{Límite temp. pila} & \textbf{Vel. objetivo mín}\\
+\midrule
+Thaiger 7 & \code{thaiger7} & 600 W & 70 \degC{} & 25 km/h\\
+Bengalo & \code{bengalo} & 900 W & 65 \degC{} & 25 km/h\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Los umbrales se pueden ajustar por coche en los \textbf{Ajustes}. La traza del mapa
+del ingeniero usa una escala de potencia distinta de \textbf{200 W}
+(\code{POWER\_MAX}).
+
+\section{Resolución de problemas}
+
+\begin{tabularx}{\linewidth}{@{}LL@{}}
+\toprule
+\textbf{Síntoma} & \textbf{Causa / solución}\\
+\midrule
+No conecta por Bluetooth & Empareja primero el módulo en los ajustes Bluetooth; comprueba la alimentación; concede Bluetooth + Ubicación. Usa \textbf{Pair New}.\\
+«Connected» pero sin datos & Dispositivo equivocado, o el controlador no envía. Prueba el modo demo y revisa el módulo.\\
+El panel nunca se pone verde & URL WebSocket incorrecta (debe ser \code{wss://\ldots:8884/mqtt}, no el puerto \code{8883}), credenciales erróneas, o sin escuchador WebSocket.\\
+Verde pero sin telemetría & El \textbf{Car} del panel no coincide con el id del teléfono, o el relé no está activado. Mismo \code{thaiger7}/\code{bengalo} en ambos.\\
+Mapa en blanco & Sin internet para las teselas OSM, o sin fix GPS aún. El mapa se centra al primer fix.\\
+La traza GPS salta & La limpieza debería evitarlo; con fixes muy gruesos, sube \code{GPS\_MAX\_ACC}. El contador \textbf{Filtered} muestra los descartes.\\
+GPS lento (cada varios segundos) & Asegura vista despejada del cielo y permiso de \textbf{Ubicación}; en interior recurre a fixes de red gruesos.\\
+No se genera CSV & Completa una sesión con tramas registradas; si no, \emph{Export CSV} indica «No data to export».\\
+\bottomrule
+\end{tabularx}
+
+\section{Ajustes avanzados}
+En el teléfono (Ajustes / Ajustes MQTT): pantalla encendida, color de velocidad,
+tasa de la IU, vibración/sonido, umbrales por coche, y todos los parámetros de
+broker/relé.
+
+\medskip
+\noindent En \code{engineer\_dashboard.html} (constantes al inicio del script):
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Constante} & \textbf{Defecto} & \textbf{Propósito}\\
+\midrule
+\code{POWER\_MAX} & 200 & Valor en vatios mapeado al rojo pleno\\
+\code{GPS\_MAX\_ACC} & 75 & Descartar fixes peores que estos metros\\
+\code{GPS\_MAX\_SPEED} & 45 & m/s; más rápido se trata como teletransporte\\
+\code{GPS\_MIN\_MOVE} & 1.5 & m; movimientos menores son temblor en parado\\
+\code{GPS\_SMOOTH} & 0.35 & Factor de suavizado EMA (0 = ninguno, 1 = crudo)\\
+\code{GPS\_MAX\_REJECTS} & 4 & Resync tras tantos rechazos seguidos\\
+\code{TRAIL\_MAX} & 250 & Máx. de puntos de traza en memoria\\
+\bottomrule
+\end{tabularx}
+
+\section{Glosario}
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt,itemindent=0pt]
+  \item[BLE] Bluetooth Low Energy, el enlace de radio del controlador al teléfono.
+  \item[MQTT] Protocolo ligero de publicación/suscripción; el broker reenvía los mensajes.
+  \item[Broker] El servidor MQTT (p.\,ej. HiveMQ Cloud) al que se conectan ambos lados.
+  \item[TLS] Cifrado de la conexión al broker.
+  \item[WebSocket] El transporte que usa el navegador para hablar MQTT (\code{ws://} / \code{wss://}).
+  \item[Pila de combustible (FC)] La fuente de energía de hidrógeno del coche.
+  \item[Supercondensador] Búfer de energía para los picos de carga.
+  \item[Traza] La línea dibujada tras el coche, coloreada por la potencia del motor.
+\end{description}
+
+
+% #####################################################################
+%  PART VI - РУССКИЙ
+% #####################################################################
+\selectlanguage{russian}
+\guidepart{Руководство пользователя}
+
+\section{Что это за проект}
+ThaiGer Track Control --- это система телеметрии из двух частей для гоночного
+автомобиля на водородных топливных элементах:
+\begin{itemize}
+  \item \textbf{Android-приложение}, работающее на телефоне \emph{внутри
+    автомобиля}. Оно получает телеметрию в реальном времени от контроллера машины
+    по \textbf{Bluetooth Low Energy (BLE)}, показывает её на гоночной панели для
+    пилота, записывает заезд и \textbf{ретранслирует} данные через интернет по
+    \textbf{MQTT}.
+  \item \textbf{Панель инженера} --- один HTML-файл
+    (\code{engineer\_dashboard.html}) --- работающая в браузере на \emph{ноутбуке
+    инженера} в боксе. Она подписывается на тот же поток MQTT и показывает
+    эксплуатационные данные, живую карту с GPS-следом, окрашенным по мощности, и
+    графики анализа.
+\end{itemize}
+Две половины никогда не общаются напрямую; они встречаются на \textbf{брокере MQTT}
+в облаке.
+
+\section{Обзор системы}
+
+\begin{lstlisting}
+   +------------+   BLE    +------------------+   MQTT/TLS   +----------------+
+   | Car        | -------> | Android app      | -----------> | MQTT broker    |
+   | controller | *A28.3*  | (phone in car)   | JSON frames  | (HiveMQ Cloud) |
+   +------------+          +------------------+              +-------+--------+
+                                  |                                  | WebSocket/TLS
+                                  | GPS (phone LocationManager)      v
+                                  v                          +----------------+
+                          thaiger/{car}/gps                  | Engineer       |
+                          thaiger/{car}/telemetry            | Dashboard HTML |
+                                                             +----------------+
+\end{lstlisting}
+\begin{itemize}
+  \item Два топика MQTT на каждую машину: \code{thaiger/\{car\}/telemetry} и
+    \code{thaiger/\{car\}/gps}.
+  \item \code{\{car\}} --- идентификатор автомобиля: \code{thaiger7} или
+    \code{bengalo}.
+  \item Телефон публикует; панель инженера подписывается. Любое число ноутбуков
+    может одновременно наблюдать за одной машиной.
+\end{itemize}
+
+\section{Android-приложение}
+
+\subsection{Установка \& первый запуск}
+Приложение --- стандартный проект Android (Gradle). Сборка отладочного APK:
+
+\begin{lstlisting}
+./gradlew assembleDebug
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Пункт} & \textbf{Значение}\\
+\midrule
+Минимум Android & 9.0 (API 28)\\
+Целевой Android & 14 (API 34)\\
+Язык & Java 11\\
+Идентификатор & \code{com.thaiger.h2racing}\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Установите APK на телефон, который остаётся в машине. При первом запуске
+открывается экран \textbf{Выбор автомобиля}.
+\begin{tgnote}
+\textbf{Совет.} Закрепите телефон горизонтально на виду у пилота. Панель удерживает
+экран включённым во время заезда (Настройки \arrow{} \emph{Не гасить экран}).
+\end{tgnote}
+
+\subsection{Разрешения}
+Приложение запрашивает разрешения на экране \textbf{Подключение}, до использования
+оборудования. Предоставьте их все для полной работы.
+
+\begin{tabularx}{\linewidth}{@{}lL@{}}
+\toprule
+\textbf{Разрешение} & \textbf{Зачем нужно}\\
+\midrule
+Bluetooth Connect / Scan (Android 12+) & Сопряжение \& связь с модулем BLE\\
+Bluetooth / Bluetooth Admin (Android $\le$ 11) & То же, на старом Android\\
+Местоположение (точное) & Требуется Android для сканирования BLE \emph{и} для GPS\\
+Местоположение (приблизительное) & Резервный GPS\\
+Интернет & Ретрансляция MQTT на ноутбук инженера\\
+Wake Lock & Держать экран включённым во время заезда\\
+Вибрация & Тактильная отдача для оповещений\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Если отказать в Bluetooth, всё равно можно использовать \textbf{демо-режим}
+(синтетические данные).
+
+\subsection{Экран 1 --- Выбор автомобиля}
+\begin{itemize}
+  \item Две карточки: \textbf{Thaiger 7} и \textbf{Bengalo}. Коснитесь карточки,
+    чтобы выбрать (синяя рамка отмечает выбор). По умолчанию Thaiger 7.
+  \item Выбранный профиль задаёт пороги предупреждений и шкалу максимальной
+    мощности.
+  \item Коснитесь \textbf{Settings} (вверху), чтобы открыть настройки перед заездом.
+  \item Коснитесь \textbf{Connect to \ldots}, чтобы перейти к экрану Подключение.
+\end{itemize}
+
+\subsection{Экран 2 --- Подключение (Bluetooth / демо-режим)}
+Этот экран связывает телефон с машиной и запускает поток данных.
+\begin{enumerate}
+  \item Приложение проверяет разрешения и что Bluetooth включён.
+  \item Диалог перечисляет \textbf{сопряжённые устройства Bluetooth} плюс
+    последний пункт \textbf{демо-режим}.
+  \item Выберите модуль вашей машины (например, устройство с именем HM-10 / HC-05 /
+    ESP32), \textbf{либо} выберите \textbf{демо-режим} для синтетического потока без
+    оборудования.
+  \item \textbf{Pair New} открывает настройки Bluetooth Android, если модуль ещё не
+    сопряжён. \textbf{Cancel} возвращает к выбору автомобиля.
+\end{enumerate}
+Когда модуль сообщает \textbf{Connected}, приложение автоматически переходит к живой
+панели. Если ретранслятор MQTT включён, он тоже стартует здесь: ноутбук инженера
+начинает получать данные с началом заезда.
+\begin{tgnote}
+Обрывы связи обрабатываются автоматически с экспоненциальной задержкой
+(1 \arrow{} 2 \arrow{} 4 \arrow{} 8 \arrow{} 16 с). Вы увидите
+\emph{Reconnecting\ldots} --- действий не требуется.
+\end{tgnote}
+
+\subsection{Экран 3 --- Живая панель}
+Панель --- основной вид пилота (горизонтально, экран не гаснет). Она непрерывно
+показывает последнее значение каждого поля телеметрии.
+\begin{itemize}
+  \item \textbf{Скорость} --- большое главное число (км/ч). Если включено
+    \emph{цветовое предупреждение скорости}, число становится \textbf{красным} ниже
+    минимальной целевой скорости. Индикатор показывает \ok{} on target /
+    \nope{} too slow.
+  \item \textbf{Строка кругов} (одна строка над нижней панелью):
+    \code{PREV 1:18} \midsep{} \code{LAP 3} \midsep{} \code{CURR 0:09} --- время
+    предыдущего круга, номер текущего круга и текущее время.
+  \item \textbf{Электрический блок} --- напряжение \& ток топливного элемента /
+    суперконденсатора / двигателя, собственное потребление, разница напряжений
+    ячеек.
+  \item \textbf{Тепло \& эффективность} --- температура элемента, скважность
+    воздушного насоса, КПД элемента и системы, энергии, оптимальная скорость,
+    подсказка по вождению.
+  \item \textbf{Баннер оповещения} --- появляется при превышении порога (например,
+    температура элемента или разница напряжений слишком высоки). С \emph{Вибрацией}
+    / \emph{Звуком оповещения} добавляется тактильная / звуковая отдача. Коснитесь
+    \textbf{Dismiss}, чтобы скрыть баннер.
+\end{itemize}
+\begin{tgnote}
+\textbf{Завершение заезда:} \textbf{долгое нажатие на число скорости.} Это
+останавливает Bluetooth и ретранслятор MQTT, завершает статистику и открывает
+\textbf{итог заезда}.
+\end{tgnote}
+
+\subsection{Экран 4 --- Итог заезда \& экспорт CSV}
+После заезда показываются сводные результаты: длительность, дистанция, средняя
+скорость, израсходованная энергия, пиковая мощность двигателя, максимальная
+температура элемента и число оповещений, плюс \textbf{график мощности}.
+\begin{itemize}
+  \item \textbf{Export CSV} --- записывает каждый зафиксированный кадр в файл CSV и
+    открывает меню «Поделиться» Android. Файл называется
+    \code{thaiger\_\{car\}\_\allowbreak\{YYYYMMDD\_HHMM\}.csv} и содержит 21 столбец.
+    Без данных появляется сообщение \emph{«No data to export»}.
+  \item \textbf{New Run} --- сразу назад к Подключению.
+  \item \textbf{Back to Car Select} --- вернуться к началу.
+\end{itemize}
+
+\subsection{Экран 5 --- Настройки}
+Доступны по ссылке \textbf{Settings} на выборе автомобиля. Всё сохраняется сразу.
+
+\subsubsection{Экран}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Настройка} & \textbf{По умолч.} & \textbf{Значение}\\
+\midrule
+Не гасить экран & Вкл & Удерживает wake lock, чтобы экран не гас\\
+Цветовое предупреждение скорости & Вкл & Красная скорость ниже минимальной целевой\\
+Частота обновления & 50 мс & Как часто перерисовывается интерфейс (20--500 мс)\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Оповещения}
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Настройка} & \textbf{По умолч.} & \textbf{Значение}\\
+\midrule
+Вибрация & Вкл & Тактильный импульс при оповещении\\
+Звук оповещения & Выкл & Воспроизводить тон при оповещении\\
+\bottomrule
+\end{tabularx}
+
+\subsubsection{Пороги (по автомобилю)}
+Хранятся отдельно для Thaiger 7 и Bengalo:
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Настройка} & \textbf{Диапазон} & \textbf{По умолч. (Thaiger 7 / Bengalo)}\\
+\midrule
+Макс. температура элемента & 30--120 \degC{} & 70 \degC{} / 65 \degC{}\\
+Макс. разница напряжений ячеек & 10--500 мВ & 50 мВ / 50 мВ\\
+\bottomrule
+\end{tabularx}
+
+\subsection{Экран 6 --- Настройки MQTT}
+Подэкран настроек, конфигурирующий ретранслятор на ноутбук инженера. Ретранслятор
+работает, только если включён \emph{до} начала заезда.
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Поле} & \textbf{По умолч.} & \textbf{Примечания}\\
+\midrule
+Включить ретранслятор & Выкл & Главный выключатель --- включите для публикации\\
+Использовать TLS & Вкл & Шифрованное соединение (требуется HiveMQ Cloud)\\
+Хост брокера & --- & например \code{abc123.s1.eu.hivemq.cloud}\\
+Порт & 8883 & Порт MQTT TLS (обычно 8883; 1883 без шифрования)\\
+Имя пользователя & --- & Имя пользователя брокера\\
+Пароль & --- & Пароль брокера (показан скрытым)\\
+Частота публикации & 5 Гц & Частота публикации телеметрии, 1--10 Гц\\
+\bottomrule
+\end{tabularx}
+\begin{tgnote}
+Телефон публикует по \textbf{нативному MQTT (TLS)}. Панель инженера подключается к
+\emph{тому же} брокеру по \textbf{MQTT поверх WebSocket} --- поэтому брокер должен
+также предоставлять слушатель WebSocket (HiveMQ Cloud: порт 8884).
+\end{tgnote}
+
+\section{Панель инженера}
+\code{engineer\_dashboard.html} --- это один автономный файл. Не нужны ни сборка, ни
+сервер --- только современный браузер и доступ в интернет (тайлы карты, шрифты и
+библиотеки MQTT/графиков с CDN).
+
+\subsection{Открытие \& подключение}
+\begin{enumerate}
+  \item Откройте \code{engineer\_dashboard.html} в Chrome/Edge/Firefox.
+  \item Диалог \textbf{Connection Settings} открывается сам при первом запуске (или
+    нажмите шестерёнку справа вверху).
+  \item Заполните: \textbf{Car} (\code{Thaiger 7} или \code{Bengalo}, как у
+    телефона); \textbf{Broker URL (WebSocket)}, например
+    \code{wss://abc123.s1.eu.hivemq.cloud:\allowbreak8884/mqtt} (\code{wss://} для TLS или
+    \code{ws://host:port} локально); \textbf{Username} / \textbf{Password}.
+  \item Нажмите \textbf{Connect}. Настройки сохраняются в браузере
+    (\code{localStorage}); в следующий раз --- автоподключение.
+\end{enumerate}
+Точка состояния (справа вверху): серая --- нет связи, янтарная --- подключение,
+зелёная --- подключено. Три вкладки переключают \textbf{Operations},
+\textbf{Live Tracking} и \textbf{Analytics}.
+
+\subsection{Вид 1 --- Operations}
+Обзор одним взглядом: \textbf{главная карточка скорости} (синяя на/выше оптимальной
+скорости, красная ниже) со средней скоростью, числом кругов, временем заезда,
+целевым кругом и дистанцией; сетка \textbf{Электрика}; сетка \textbf{Тепло \&
+Эффективность}; и пульсирующая метка \textbf{LIVE}.
+
+\subsection{Вид 2 --- Live Tracking \& карта}
+Тёмная \textbf{OpenStreetMap} на весь экран (Leaflet), следящая за машиной.
+\begin{itemize}
+  \item \textbf{След, окрашенный по мощности} --- рисуется по сегментам и
+    окрашивается по мощности двигателя: \textcolor{tgreen}{зелёный (0 Вт)} \arrow{}
+    \textcolor{tamber}{янтарный (100 Вт)} \arrow{} \textcolor{tred}{красный
+    (200 Вт+)}. Самая свежая часть непрозрачна и тускнеет со временем. (200 Вт ---
+    максимальная мощность отслеживания ThaiGer; константа \code{POWER\_MAX}
+    изменяема.)
+  \item \textbf{Легенда мощности} (внизу слева) --- цветовая шкала и показание в
+    ваттах в реальном времени.
+  \item \textbf{Маркер машины} указывает направление движения.
+  \item \textbf{Панель состояния GPS} (справа) --- качество фикса, точность, широта,
+    долгота, высота, скорость GPS, курс, мощность двигателя, число кругов и счётчик
+    \textbf{Filtered}.
+\end{itemize}
+
+\subsubsection{Очистка GPS-шума}
+Каждый фикс очищается в четыре шага: (1) отбрасываются фиксы с точностью хуже 75 м;
+(2) отклоняются «телепорты» --- фиксы с невозможной скоростью (более ~162 км/ч), с
+защитой от ресинхронизации; (3) игнорируется дрожание менее 1,5 м на стоянке;
+(4) лёгкое сглаживание. Результат --- чистый след без случайных скачков.
+
+\subsubsection{Снимок за круг + сброс}
+Каждый раз при увеличении счётчика кругов панель отрисовывает след завершённого
+круга в PNG и скачивает его (\code{thaiger-lapN-<timestamp>.png}), затем очищает
+след.
+Зелёное уведомление подтверждает каждое сохранение.
+
+\subsection{Вид 3 --- Analytics}
+\textbf{Живая таблица телеметрии} со всеми 22 полями, а также график \textbf{Speed}
+(км/ч во времени) и график \textbf{Efficiency} (КПД элемента и системы), каждый ---
+по последним 60 точкам.
+
+\section{Протокол телеметрии \& справочник полей}
+Контроллер отправляет ASCII-кадры по BLE. Каждое поле обрамлено звёздочками с
+однобуквенным ключом:
+
+\begin{lstlisting}
+*A28.3**B25.0**C3**D15:35**N53.4*
+\end{lstlisting}
+Парсер устойчив к потоку и всегда хранит последнее известное значение каждого поля.
+
+\begin{tabularx}{\linewidth}{@{}clL@{}}
+\toprule
+\textbf{Ключ} & \textbf{Поле} & \textbf{Ед.}\\
+\midrule
+A & Скорость & км/ч\\
+B & Средняя скорость & км/ч\\
+C & Число кругов & ---\\
+D & Общее время & мм:сс\\
+E & Целевое время круга & мм:сс\\
+F & Оптимальная скорость & км/ч\\
+G & Напряжение элемента & В\\
+H & Напряжение суперконденсатора & В\\
+I & Напряжение двигателя & В\\
+J & Ток элемента & А\\
+K & Ток суперконденсатора & А\\
+L & Ток двигателя & А\\
+M & Собственное потребление & А\\
+N & Температура элемента & \degC{}\\
+O & Скважность воздушного насоса & \%\\
+P & Подсказка по вождению & ---\\
+Q & Разница напряжений ячеек & мВ\\
+R & Энергия элемента (накопл.) & Вт·с\\
+S & Энергия двигателя (накопл.) & Вт·с\\
+T & КПД элемента & \%\\
+U & КПД системы & \%\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Дистанция, мощность двигателя ($V \times A$) и энергия в Вт·ч вычисляются на
+телефоне.
+
+\section{Топики MQTT \& полезная нагрузка}
+Все сообщения --- \textbf{QoS 0}. Пустые/NaN поля опускаются (нагрузка около
+100--200 байт).
+
+\noindent\textbf{\code{thaiger/\{car\}/telemetry}} --- публикуется с заданной
+частотой (по умолчанию 5 Гц):
+
+\begin{lstlisting}
+{"ts":1736517201234,"A":28.3,"B":25.0,"C":3,"D":"15:35","G":28.3,"N":53.4,"dist":0.42}
+\end{lstlisting}
+\noindent\textbf{\code{thaiger/\{car\}/gps}} --- публикуется при наличии GPS-фикса:
+
+\begin{lstlisting}
+{"ts":1736517201300,"lat":13.756331,"lon":100.501762,"alt":12.0,"spd":53.4,"acc":3.5,"hdg":270.0}
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{@{}lLl@{}}
+\toprule
+\textbf{Поле} & \textbf{Значение} & \textbf{Ед.}\\
+\midrule
+ts & Метка времени Unix & мс\\
+lat / lon & Широта / долгота & град\\
+alt & Высота (если есть) & м\\
+spd & Скорость GPS (если есть) & км/ч\\
+acc & Горизонтальная точность (если есть) & м\\
+hdg & Курс (если есть) & град\\
+\bottomrule
+\end{tabularx}
+
+\section{Профили автомобилей}
+
+\begin{tabularx}{\linewidth}{@{}llllL@{}}
+\toprule
+\textbf{Профиль} & \textbf{id} & \textbf{Макс. мощн.} & \textbf{Предел темп.} & \textbf{Мин. цел. скорость}\\
+\midrule
+Thaiger 7 & \code{thaiger7} & 600 Вт & 70 \degC{} & 25 км/ч\\
+Bengalo & \code{bengalo} & 900 Вт & 65 \degC{} & 25 км/ч\\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Пороги можно переопределить для каждой машины в \textbf{Настройках}. След карты на
+панели инженера использует отдельную шкалу мощности \textbf{200 Вт}
+(\code{POWER\_MAX}).
+
+\section{Устранение неполадок}
+
+\begin{tabularx}{\linewidth}{@{}LL@{}}
+\toprule
+\textbf{Симптом} & \textbf{Причина / решение}\\
+\midrule
+Нет связи по Bluetooth & Сначала сопрягите модуль в настройках Bluetooth; проверьте питание; выдайте Bluetooth + Местоположение. Используйте \textbf{Pair New}.\\
+«Connected», но нет данных & Не то устройство или контроллер молчит. Проверьте демо-режим, затем модуль.\\
+Панель не зеленеет & Неверный WebSocket-URL (должен быть \code{wss://\ldots:8884/mqtt}, не порт \code{8883}), неверные данные или нет слушателя WebSocket.\\
+Зелёная, но нет телеметрии & \textbf{Car} на панели не совпадает с id телефона, либо ретранслятор не включён. С обеих сторон одинаковый \code{thaiger7}/\code{bengalo}.\\
+Пустая карта & Нет интернета для тайлов OSM или ещё нет GPS-фикса. Карта центрируется при первом фиксе.\\
+След GPS скачет & Очистка должна это предотвращать; при очень грубых фиксах поднимите \code{GPS\_MAX\_ACC}. Счётчик \textbf{Filtered} показывает отброшенные.\\
+GPS обновляется раз в несколько секунд & Обеспечьте открытое небо и разрешение \textbf{Местоположение}; в помещении --- грубые сетевые фиксы.\\
+Нет CSV & Завершите заезд с записанными кадрами; иначе \emph{Export CSV} сообщает «No data to export».\\
+\bottomrule
+\end{tabularx}
+
+\section{Тонкая настройка}
+На телефоне (Настройки / Настройки MQTT): подсветка экрана, цвет скорости, частота
+интерфейса, вибрация/звук, пороги по машине и все параметры брокера/ретранслятора.
+
+\medskip
+\noindent В \code{engineer\_dashboard.html} (константы в начале скрипта):
+
+\begin{tabularx}{\linewidth}{@{}llL@{}}
+\toprule
+\textbf{Константа} & \textbf{По умолч.} & \textbf{Назначение}\\
+\midrule
+\code{POWER\_MAX} & 200 & Значение в ваттах для полного красного\\
+\code{GPS\_MAX\_ACC} & 75 & Отбрасывать фиксы хуже этого числа метров\\
+\code{GPS\_MAX\_SPEED} & 45 & м/с; быстрее --- считается телепортом\\
+\code{GPS\_MIN\_MOVE} & 1.5 & м; меньшие перемещения --- дрожание на стоянке\\
+\code{GPS\_SMOOTH} & 0.35 & Коэффициент сглаживания EMA (0 --- нет, 1 --- сырой)\\
+\code{GPS\_MAX\_REJECTS} & 4 & Ресинхронизация после стольких отказов подряд\\
+\code{TRAIL\_MAX} & 250 & Макс. число точек следа в памяти\\
+\bottomrule
+\end{tabularx}
+
+\section{Глоссарий}
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt,itemindent=0pt]
+  \item[BLE] Bluetooth Low Energy, радиоканал от контроллера к телефону.
+  \item[MQTT] Лёгкий протокол публикации/подписки; брокер ретранслирует сообщения.
+  \item[Брокер] Сервер MQTT (например, HiveMQ Cloud), к которому подключаются обе стороны.
+  \item[TLS] Шифрование соединения с брокером.
+  \item[WebSocket] Транспорт, по которому браузер говорит на MQTT (\code{ws://} / \code{wss://}).
+  \item[Топливный элемент (FC)] Водородный источник энергии на машине.
+  \item[Суперконденсатор] Энергетический буфер для пиков нагрузки.
+  \item[След (Trail)] Линия за машиной на карте, окрашенная по мощности двигателя.
+\end{description}
+
+\end{document}

@@ -310,7 +310,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="MOTOR CURRENT"
+                        android:text="SUPERCAP VOLTAGE"
                         android:textColor="#3D4F60"
                         android:textSize="9sp"
                         android:letterSpacing="0.1"
@@ -323,10 +323,10 @@
                         android:gravity="center_vertical">
 
                         <TextView
-                            android:id="@+id/tv_current"
+                            android:id="@+id/tv_supercap_voltage"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="8.2"
+                            android:text="27.4"
                             android:textColor="#E8EDF2"
                             android:textSize="28sp"
                             android:fontFamily="sans-serif-medium"/>
@@ -334,7 +334,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="A"
+                            android:text="V"
                             android:textColor="#3D4F60"
                             android:textSize="13sp"
                             android:layout_marginStart="3dp"

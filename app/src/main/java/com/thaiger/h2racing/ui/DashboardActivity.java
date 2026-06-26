@@ -77,7 +77,7 @@ public class DashboardActivity extends AppCompatActivity {
     private TextView tvFcState;       // wir mappen auf Systemwirkungsgrad
     private ProgressBar pbFcState;
     private TextView tvPower;
-    private TextView tvCurrent;
+    private TextView tvSupercapVoltage;
 
     // ─── Rechte Zone ───
     private TextView tvFcTemp;
@@ -181,7 +181,7 @@ public class DashboardActivity extends AppCompatActivity {
         tvFcState         = findViewById(R.id.tv_fc_state);
         pbFcState         = findViewById(R.id.pb_fc_state);
         tvPower           = findViewById(R.id.tv_power);
-        tvCurrent         = findViewById(R.id.tv_current);
+        tvSupercapVoltage = findViewById(R.id.tv_supercap_voltage);
         tvFcTemp          = findViewById(R.id.tv_fc_temp);
         tvFcAlertTag      = findViewById(R.id.tv_fc_alert_tag);
         cardFcTemp        = findViewById(R.id.card_fc_temp);
@@ -467,8 +467,8 @@ public class DashboardActivity extends AppCompatActivity {
         if (!Float.isNaN(power)) {
             tvPower.setText(String.format(Locale.US, "%.0f", power));
         }
-        if (!Float.isNaN(m.motorCurrentA)) {
-            tvCurrent.setText(String.format(Locale.US, "%.1f", m.motorCurrentA));
+        if (!Float.isNaN(m.supercapVoltageV)) {
+            tvSupercapVoltage.setText(String.format(Locale.US, "%.1f", m.supercapVoltageV));
         }
 
         // ─── Rechte Zone: FC-Temp (Primär-Health) ───

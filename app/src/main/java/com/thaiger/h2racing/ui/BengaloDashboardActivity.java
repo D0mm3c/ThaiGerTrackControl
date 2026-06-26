@@ -6,12 +6,15 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputType;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
@@ -54,8 +57,11 @@ public class BengaloDashboardActivity extends AppCompatActivity {
 
     // ─── Views ───
     private TextView tvSpeed, tvSupercap, tvTime, tvCarBadge, tvBtStatus;
-    private TextView tvLapPrev, tvLapHeader, tvLapCurr;
+    private TextView tvLapPrev, tvLapHeader, tvLapCurr, tvTarget;
     private TextView btnLap;
+
+    /** Target lap time [s] for the countdown — configurable (tap the tile). 0 = off. */
+    private int targetLapSec = 0;
 
     // ─── Lap / timer state (driven by the button, not telemetry) ───
     private boolean raceStarted = false;
@@ -81,6 +87,7 @@ public class BengaloDashboardActivity extends AppCompatActivity {
         fcTempThresholdC  = prefs.getFcTempMaxC(car);
         updateRateMs      = prefs.getUpdateRateMs();
         speedColorEnabled = prefs.isSpeedColorEnabled();
+        targetLapSec      = prefs.getTargetLapTimeSec(car);
         runStats          = app.getRunStats();
         if (runStats == null) { runStats = new RunStats(); app.setRunStats(runStats); }
         relayService      = app.getRelayService();
@@ -90,6 +97,10 @@ public class BengaloDashboardActivity extends AppCompatActivity {
         renderLaps(System.currentTimeMillis());   // initial "—" state
 
         btnLap.setOnClickListener(v -> onLapPress());
+
+        // Tap the TARGET LAP tile to set the target lap time.
+        View target = findViewById(R.id.ll_b_target);
+        if (target != null) target.setOnClickListener(v -> editTargetLap());
 
         // Long-press the info column ends the run (deliberate — glove-safe).
         View info = findViewById(R.id.ll_bengalo_info);
@@ -109,6 +120,7 @@ public class BengaloDashboardActivity extends AppCompatActivity {
         tvLapPrev   = findViewById(R.id.tv_b_lap_prev);
         tvLapHeader = findViewById(R.id.tv_b_lap_header);
         tvLapCurr   = findViewById(R.id.tv_b_lap_curr);
+        tvTarget    = findViewById(R.id.tv_b_target);
         btnLap      = findViewById(R.id.btn_b_lap);
     }
 
@@ -213,10 +225,12 @@ public class BengaloDashboardActivity extends AppCompatActivity {
             tvLapCurr.setText("CURR  0:00");
             tvLapCurr.setTextColor(0xFFE8EDF2);
             tvLapPrev.setText("PREV  —:—");
+            renderTarget(0, false);
             return;
         }
         int raceSec = (int) ((now - raceStartMs) / 1000);
         tvTime.setText(formatMinSec(raceSec));
+        renderTarget(raceSec, true);
         btnLap.setText("LAP\n" + lapCount);
         tvLapHeader.setText("LAP " + lapCount);
 
@@ -234,6 +248,74 @@ public class BengaloDashboardActivity extends AppCompatActivity {
             tvLapCurr.setTextColor(color);
         } else {
             tvLapPrev.setText("PREV  —:—");
+        }
+    }
+
+    /**
+     * TARGET LAP countdown, same idea as the Thaiger 7 cockpit: how long the
+     * current lap must take to stay on the cumulative target schedule. It ticks
+     * down with the run time and jumps back up each lap.
+     */
+    private void renderTarget(int raceSec, boolean started) {
+        if (targetLapSec <= 0) {                 // not configured — invite a tap
+            tvTarget.setText("SET");
+            tvTarget.setTextColor(0xFF3D6FFF);
+            return;
+        }
+        if (!started) {                          // pre-start: show the plain target
+            tvTarget.setText(formatMinSec(targetLapSec));
+            tvTarget.setTextColor(0xFFE8EDF2);
+            return;
+        }
+        int optNextLap = lapCount * targetLapSec - raceSec;
+        if (optNextLap <= 0) {                   // unrecoverable in one lap
+            tvTarget.setText("—:—");
+            tvTarget.setTextColor(0xFFFF3B3B);
+        } else {
+            tvTarget.setText(formatMinSec(optNextLap));
+            tvTarget.setTextColor(optNextLap < targetLapSec
+                    ? 0xFFFFAA00      // orange: must go faster than target
+                    : 0xFFE8EDF2);    // white: on / ahead of schedule
+        }
+    }
+
+    /** Dialog to set the target lap time (m:ss or seconds). Persisted per car. */
+    private void editTargetLap() {
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setHint("m:ss  (e.g. 1:20)");
+        if (targetLapSec > 0) input.setText(formatMinSec(targetLapSec));
+        input.setSelectAllOnFocus(true);
+        new AlertDialog.Builder(this)
+                .setTitle("Target lap time — Bengalo")
+                .setView(input)
+                .setPositiveButton("Save", (d, w) -> {
+                    targetLapSec = parseLapInput(input.getText().toString());
+                    prefs.setTargetLapTimeSec(car, targetLapSec);
+                    renderLaps(System.currentTimeMillis());
+                })
+                .setNeutralButton("Clear", (d, w) -> {
+                    targetLapSec = 0;
+                    prefs.setTargetLapTimeSec(car, 0);
+                    renderLaps(System.currentTimeMillis());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /** "1:20" → 80, or plain seconds. Clamped to 0..3600. */
+    private static int parseLapInput(String s) {
+        s = s.trim();
+        if (s.isEmpty()) return 0;
+        try {
+            int idx = s.indexOf(':');
+            int sec = (idx < 0)
+                    ? Integer.parseInt(s)
+                    : Integer.parseInt(s.substring(0, idx).trim()) * 60
+                      + Integer.parseInt(s.substring(idx + 1).trim());
+            return Math.max(0, Math.min(3600, sec));
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

@@ -24,6 +24,7 @@ public final class Prefs {
     private static final String K_UPDATE_RATE_MS = "update_rate_ms";
     private static final String K_FC_TEMP_PREFIX  = "fc_temp_max_";    // + carId
     private static final String K_CELLDIFF_PREFIX = "cell_diff_max_"; // + carId
+    private static final String K_TARGET_LAP_PREFIX = "target_lap_sec_"; // + carId (0 = off)
 
     // Speed color
     private static final String K_SPEED_COLOR   = "speed_color";
@@ -91,6 +92,10 @@ public final class Prefs {
         float clamped = Math.max(10f, Math.min(500f, mv));
         sp.edit().putFloat(K_CELLDIFF_PREFIX + car.id, clamped).apply();
     }
+
+    /** Ziel-Rundenzeit [s] für den TARGET-LAP-Countdown. 0 = aus. */
+    public int  getTargetLapTimeSec(CarProfile car)          { return sp.getInt(K_TARGET_LAP_PREFIX + car.id, 0); }
+    public void setTargetLapTimeSec(CarProfile car, int sec) { sp.edit().putInt(K_TARGET_LAP_PREFIX + car.id, Math.max(0, Math.min(3600, sec))).apply(); }
 
     // ─── MQTT-Relay ───
     public boolean isMqttEnabled()              { return sp.getBoolean(K_MQTT_ENABLED, DEFAULT_MQTT_ENABLED); }

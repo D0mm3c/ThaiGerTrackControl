@@ -143,25 +143,71 @@
 
             </LinearLayout>
 
-            <!-- Time (starts on first lap tap) -->
-            <TextView
+            <!-- Time (starts on first lap tap)  +  Target-lap countdown (tap to set) -->
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="TIME"
-                android:textColor="#3D4F60"
-                android:textSize="10sp"
-                android:letterSpacing="0.12"
-                android:layout_marginTop="10dp"/>
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
 
-            <TextView
-                android:id="@+id/tv_b_time"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="0:00"
-                android:textColor="#E8EDF2"
-                android:textSize="38sp"
-                android:includeFontPadding="false"
-                android:fontFamily="monospace"/>
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TIME"
+                        android:textColor="#3D4F60"
+                        android:textSize="10sp"
+                        android:letterSpacing="0.12"/>
+
+                    <TextView
+                        android:id="@+id/tv_b_time"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00"
+                        android:textColor="#E8EDF2"
+                        android:textSize="38sp"
+                        android:includeFontPadding="false"
+                        android:fontFamily="monospace"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/ll_b_target"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="32dp"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TARGET LAP"
+                        android:textColor="#3D4F60"
+                        android:textSize="10sp"
+                        android:letterSpacing="0.12"/>
+
+                    <TextView
+                        android:id="@+id/tv_b_target"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SET"
+                        android:textColor="#3D6FFF"
+                        android:textSize="38sp"
+                        android:includeFontPadding="false"
+                        android:fontFamily="monospace"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
 
             <!-- Lap times (PREV · LAP · CURR) -->
             <LinearLayout

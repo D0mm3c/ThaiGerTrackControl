@@ -240,7 +240,11 @@ public class ConnectingActivity extends AppCompatActivity {
                 tvTitle.setText("Connected");
                 tvDevice.setText(detail);
                 advancedToDashboard = true;
-                startActivity(new Intent(this, DashboardActivity.class));
+                // Bengalo has no lap switch → its own glove-friendly dashboard.
+                Class<?> dashboard = ((App) getApplication()).getCarProfile() == CarProfile.BENGALO
+                        ? BengaloDashboardActivity.class
+                        : DashboardActivity.class;
+                startActivity(new Intent(this, dashboard));
                 finish();
                 break;
             case RECONNECTING:

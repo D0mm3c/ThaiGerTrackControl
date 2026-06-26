@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bengalo race dashboard — glove-friendly, manual lap button.
+    Activity: BengaloDashboardActivity.java   Orientation: landscape
+    Layout: big LAP button (right) + speed / supercap voltage / time / lap times (left).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0A0C0F">
+
+    <!-- ── Top bar ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/tv_b_car_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BENGALO"
+            android:textColor="#3D6FFF"
+            android:textSize="14sp"
+            android:letterSpacing="0.10"
+            android:fontFamily="sans-serif-medium"/>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/tv_b_bt_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BT —"
+            android:textColor="#7A8A99"
+            android:textSize="13sp"
+            android:fontFamily="monospace"/>
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1E2530"/>
+
+    <!-- ── Main: info column + big lap button ── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- Info column (long-press to end run) -->
+        <LinearLayout
+            android:id="@+id/ll_bengalo_info"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.25"
+            android:orientation="vertical"
+            android:gravity="center_vertical"
+            android:paddingStart="22dp"
+            android:paddingEnd="16dp">
+
+            <!-- Speed -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SPEED"
+                android:textColor="#3D4F60"
+                android:textSize="10sp"
+                android:letterSpacing="0.12"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="true">
+
+                <TextView
+                    android:id="@+id/tv_b_speed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#E8EDF2"
+                    android:textSize="92sp"
+                    android:includeFontPadding="false"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" km/h"
+                    android:textColor="#3D4F60"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="14dp"
+                    android:layout_gravity="bottom"/>
+
+            </LinearLayout>
+
+            <!-- Supercap voltage -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SUPERCAP VOLTAGE"
+                android:textColor="#3D4F60"
+                android:textSize="10sp"
+                android:letterSpacing="0.12"
+                android:layout_marginTop="10dp"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="true">
+
+                <TextView
+                    android:id="@+id/tv_b_supercap"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="—"
+                    android:textColor="#E8EDF2"
+                    android:textSize="38sp"
+                    android:includeFontPadding="false"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" V"
+                    android:textColor="#3D4F60"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_gravity="bottom"/>
+
+            </LinearLayout>
+
+            <!-- Time (starts on first lap tap) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TIME"
+                android:textColor="#3D4F60"
+                android:textSize="10sp"
+                android:letterSpacing="0.12"
+                android:layout_marginTop="10dp"/>
+
+            <TextView
+                android:id="@+id/tv_b_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00"
+                android:textColor="#E8EDF2"
+                android:textSize="38sp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"/>
+
+            <!-- Lap times (PREV · LAP · CURR) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="14dp">
+
+                <TextView
+                    android:id="@+id/tv_b_lap_prev"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PREV  —:—"
+                    android:textColor="#7A8A99"
+                    android:textSize="15sp"
+                    android:fontFamily="monospace"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="  ·  "
+                    android:textColor="#3D4F60"
+                    android:textSize="15sp"/>
+
+                <TextView
+                    android:id="@+id/tv_b_lap_header"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LAP —"
+                    android:textColor="#E8EDF2"
+                    android:textSize="15sp"
+                    android:fontFamily="monospace"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="  ·  "
+                    android:textColor="#3D4F60"
+                    android:textSize="15sp"/>
+
+                <TextView
+                    android:id="@+id/tv_b_lap_curr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CURR  0:00"
+                    android:textColor="#E8EDF2"
+                    android:textSize="15sp"
+                    android:fontFamily="monospace"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Big LAP button -->
+        <TextView
+            android:id="@+id/btn_b_lap"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="16dp"
+            android:text="TAP TO\nSTART"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="46sp"
+            android:textStyle="bold"
+            android:lineSpacingMultiplier="0.95"
+            android:background="#3D6FFF"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"/>
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -63,6 +63,12 @@
             android:exported="false"
             android:screenOrientation="landscape"/>
 
+        <!-- Screen 3b: Bengalo Dashboard (glove-friendly, manual lap button) -->
+        <activity
+            android:name=".ui.BengaloDashboardActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"/>
+
         <!-- Screen 4: Alert Overlay -->
         <activity
             android:name=".ui.AlertActivity"

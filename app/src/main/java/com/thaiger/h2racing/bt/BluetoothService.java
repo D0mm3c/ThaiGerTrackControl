@@ -86,6 +86,9 @@ public class BluetoothService {
     private volatile String  deviceAddress;
     private volatile String  deviceName = "—";
 
+    /** Derived lap count (e.g. Bengalo manual lap button). -1 = use the frame's own value. */
+    private volatile int     lapOverride = -1;
+
     private long backoff = BACKOFF_INIT_MS;
 
     /** Akkumulator für BLE-Chunks (max 20 Bytes each). Zugriff synchronized. */
@@ -107,6 +110,13 @@ public class BluetoothService {
     public void setListener(Listener l) { this.listener = l; }
     public void setRelay(FrameRelay r)  { this.relay = r; }
     public String getDeviceName()       { return deviceName; }
+
+    /**
+     * Override the lap count stamped into every outgoing frame — used by the
+     * Bengalo dashboard (manual lap button) so the relayed telemetry carries the
+     * derived lap count for the engineer dashboard. Pass -1 to disable.
+     */
+    public void setLapOverride(int laps) { this.lapOverride = laps; }
 
     /**
      * Verbindet mit einem gepairten HM-10 per MAC-Adresse.
@@ -330,6 +340,10 @@ public class BluetoothService {
         rollingFrame.timestampMs = now;
 
         TelemetryModel snapshot = snapshotOf(rollingFrame);
+        // Derived lap count (Bengalo manual lap button) — stamp it into the frame
+        // so both the UI and the MQTT relay carry it.
+        int lo = lapOverride;
+        if (lo >= 0) snapshot.laps = lo;
         emitTelemetry(snapshot);
 
         // MQTT-Relay: ruft onFrame() auf dem Binder-Thread auf

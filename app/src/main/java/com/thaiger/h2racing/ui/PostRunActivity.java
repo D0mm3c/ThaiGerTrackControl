@@ -164,20 +164,28 @@ public class PostRunActivity extends AppCompatActivity {
         File outFile = new File(getCacheDir(), fileName);
 
         try (FileWriter fw = new FileWriter(outFile)) {
-            fw.write("time_s,speed_kmh,avg_speed_kmh,laps,target_lap_s," +
+            // Real per-frame time first (phone clock) — always present, even when the
+            // controller sends no run-time field (e.g. Bengalo). esp_time_s keeps the
+            // controller's own run time (may be empty).
+            fw.write("timestamp_ms,elapsed_s,esp_time_s," +
+                     "speed_kmh,avg_speed_kmh,laps,target_lap_s,optimal_speed_kmh," +
                      "fc_voltage_v,supercap_voltage_v,motor_voltage_v," +
                      "fc_current_a,supercap_current_a,motor_current_a,own_consumption_a," +
-                     "fc_temp_c,air_pump_pct,cell_volt_diff_mv," +
+                     "fc_temp_c,air_pump_pct,driving_hint,cell_volt_diff_mv," +
                      "fc_energy_ws,motor_energy_ws,fc_efficiency_pct,sys_efficiency_pct," +
                      "distance_km,motor_power_w\n");
 
             List<TelemetryModel> frames = stats.frames;
+            long t0 = frames.get(0).timestampMs;   // elapsed_s is relative to the first frame
             for (TelemetryModel m : frames) {
-                fw.write(csvInt(m.totalTimeSec) + "," +
+                fw.write(m.timestampMs + "," +
+                         String.format(Locale.US, "%.2f", (m.timestampMs - t0) / 1000.0) + "," +
+                         csvInt(m.totalTimeSec) + "," +
                          csvFloat(m.speedKmh) + "," +
                          csvFloat(m.avgSpeedKmh) + "," +
                          csvInt(m.laps) + "," +
                          csvInt(m.targetLapTimeSec) + "," +
+                         csvFloat(m.optimalSpeedKmh) + "," +
                          csvFloat(m.fcVoltageV) + "," +
                          csvFloat(m.supercapVoltageV) + "," +
                          csvFloat(m.motorVoltageV) + "," +
@@ -187,6 +195,7 @@ public class PostRunActivity extends AppCompatActivity {
                          csvFloat(m.ownConsumptionA) + "," +
                          csvFloat(m.fcTempC) + "," +
                          csvFloat(m.airPumpDutyPct) + "," +
+                         csvFloat(m.drivingHint) + "," +
                          csvFloat(m.cellVoltDiffMv) + "," +
                          csvFloat(m.fcEnergyWs) + "," +
                          csvFloat(m.motorEnergyWs) + "," +
